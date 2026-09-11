@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>MSBuild.SDK.SystemWeb.WebForms.Generator</AssemblyName>
+    <RootNamespace>MSBuild.SDK.SystemWeb.WebForms.Generator</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>MSBuild.SDK.SystemWeb.WebForms</PackageId>
+    <Description>Secondary MSBuild SDK for MSBuild.SDK.SystemWeb projects that generates ASP.NET Web Forms designer code (control fields, typed Master/PreviousPage properties) from .aspx/.ascx/.master markup using a Roslyn incremental source generator.</Description>
+    <PackageTags>MSBuild;MSBuildSdk;System.Web;WebForms;ASP.NET;SourceGenerator;designer</PackageTags>
+    <PackageType>MSBuildSdk</PackageType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeSymbols>false</IncludeSymbols>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <DevelopmentDependency>true</DevelopmentDependency>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 4.8.0 keeps the generator loadable in Visual Studio 2022 17.8+ and in the Microsoft.Net.Compilers.Toolset 5.0.0 compiler used by MSBuild.SDK.SystemWeb. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" PrivateAssets="all" />
+    <PackageReference Include="PolySharp" Version="1.15.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="version.json" />
+    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+    <!-- The generator assembly is shipped inside the SDK package and registered by Sdk\MSBuild.SDK.SystemWeb.WebForms.targets. -->
+    <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers\dotnet\cs\" Visible="false" />
+  </ItemGroup>
+
+</Project>

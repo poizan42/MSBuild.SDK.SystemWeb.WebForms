@@ -1,0 +1,21 @@
+<Project>
+  <!--
+    MSBuild.SDK.SystemWeb.WebForms
+    Secondary SDK for MSBuild.SDK.SystemWeb projects. Adds a Roslyn incremental source generator that produces
+    the ASP.NET Web Forms designer code (control fields, typed Master/PreviousPage properties) for
+    .aspx / .ascx / .master files, replacing the *.designer.cs files that Visual Studio only maintains
+    for legacy Web Application Projects.
+
+    Usage:
+      <Project Sdk="MSBuild.SDK.SystemWeb">
+        <Sdk Name="MSBuild.SDK.SystemWeb.WebForms" />
+        ...
+      </Project>
+  -->
+  <PropertyGroup>
+    <!-- Set to false to keep the SDK imported but not run the designer generator. -->
+    <EnableWebFormsDesignerGenerator Condition="'$(EnableWebFormsDesignerGenerator)'==''">true</EnableWebFormsDesignerGenerator>
+    <!-- Location of the generator assembly. Overridable for local development of the generator itself. -->
+    <MSBuildSDKSystemWebWebFormsGeneratorPath Condition="'$(MSBuildSDKSystemWebWebFormsGeneratorPath)'==''">$(MSBuildThisFileDirectory)..\analyzers\dotnet\cs\MSBuild.SDK.SystemWeb.WebForms.Generator.dll</MSBuildSDKSystemWebWebFormsGeneratorPath>
+  </PropertyGroup>
+</Project>

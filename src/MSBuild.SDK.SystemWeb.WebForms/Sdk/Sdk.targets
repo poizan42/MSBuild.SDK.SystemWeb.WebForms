@@ -1,0 +1,3 @@
+<Project>
+  <Import Project="MSBuild.SDK.SystemWeb.WebForms.targets" />
+</Project>

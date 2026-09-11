@@ -1,0 +1,48 @@
+<Project>
+  <PropertyGroup>
+    <Authors>Kasper Fabæch Brandt</Authors>
+    <Copyright>© Kasper Fabæch Brandt. All rights reserved.</Copyright>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+    <PackageLicensePath>$(MSBuildThisFileDirectory)$(PackageLicenseFile)</PackageLicensePath>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <!-- MSBuild SDK packages: everything under Sdk\ goes into the package's Sdk\ folder, plus the README (with $version$ replaced) and the license. -->
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Include="Sdk\**"
+          Pack="true"
+          PackagePath="Sdk\" />
+    <None Include="README.md" Condition="EXISTS('README.md')" Pack="true" PackagePath="\" ReplaceVersion="true" />
+    <None Include="$(PackageLicensePath)"
+          Pack="true"
+          PackagePath="$(PackageLicenseFile)"
+          Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Nerdbank.GitVersioning" Version="3.10.94" PrivateAssets="All" />
+  </ItemGroup>
+
+  <!-- Replaces the $version$ token in files marked ReplaceVersion="true" before they are packed (same mechanism as MSBuild.SDK.SystemWeb). -->
+  <Target Name="UpdateFiles" BeforeTargets="BeforeBuild" DependsOnTargets="GetBuildVersion">
+    <ItemGroup>
+      <_Temporary Remove="@(_Temporary)" />
+      <_Temporary Include="@(None->HasMetadata('ReplaceVersion'))">
+        <SourceGroup>None</SourceGroup>
+        <SourceFile>%(Identity)</SourceFile>
+        <VersionedFile>$([System.IO.Path]::Combine($(IntermediateOutputPath),%(Identity)))</VersionedFile>
+        <PackagePath>$([MSBuild]::ValueOrDefault('%(None.PackagePath)', '%(Identity)'))</PackagePath>
+      </_Temporary>
+    </ItemGroup>
+    <Message Text="Updating Version of %(_Temporary.Identity) [%(_Temporary.SourceGroup)]" Importance="high" Condition="@(_Temporary->Count())!=0" />
+    <WriteLinesToFile
+        File="%(_Temporary.VersionedFile)"
+        Lines="$([System.IO.File]::ReadAllText('%(_Temporary.SourceFile)').Replace('$version$','$(Version)'))"
+        Overwrite="true"
+        Encoding="UTF-8" Condition="@(_Temporary->Count())!=0" />
+    <ItemGroup>
+      <None Remove="@(_Temporary->WithMetadataValue('SourceGroup','None'))" />
+      <None Include="@(_Temporary->WithMetadataValue('SourceGroup','None')->'%(VersionedFile)')" />
+    </ItemGroup>
+  </Target>
+</Project>

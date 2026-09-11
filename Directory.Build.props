@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>Latest</LangVersion>
+    <MSBuildTreatWarningsAsErrors>true</MSBuildTreatWarningsAsErrors>
+    <PackageOutputPath Condition="'$(PackageOutputPath)'==''">$(MSBuildThisFileDirectory)packages\</PackageOutputPath>
+    <EnableDefaultNoneItems>false</EnableDefaultNoneItems>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+</Project>

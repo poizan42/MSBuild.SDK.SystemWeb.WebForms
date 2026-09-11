@@ -1,0 +1,8 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <!-- Generator diagnostics (SWWFxxx) are warnings by design; do not fail the sample build on them. -->
+    <MSBuildTreatWarningsAsErrors>false</MSBuildTreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>

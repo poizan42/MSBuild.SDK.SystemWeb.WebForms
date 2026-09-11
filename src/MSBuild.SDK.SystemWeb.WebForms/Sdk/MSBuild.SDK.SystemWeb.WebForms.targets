@@ -1,0 +1,28 @@
+<Project>
+  <PropertyGroup>
+    <!-- Only C# projects are supported by the generator for now. $(Language) is not set yet at this point, so gate on the extension. -->
+    <_WebFormsGeneratorEnabled>false</_WebFormsGeneratorEnabled>
+    <_WebFormsGeneratorEnabled Condition="'$(EnableWebFormsDesignerGenerator)'=='true' AND '$(MSBuildProjectExtension)'=='.csproj'">true</_WebFormsGeneratorEnabled>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(_WebFormsGeneratorEnabled)'=='true'">
+    <Analyzer Include="$(MSBuildSDKSystemWebWebFormsGeneratorPath)" Condition="Exists('$(MSBuildSDKSystemWebWebFormsGeneratorPath)')" />
+
+    <!--
+      The MSBuild.SDK.SystemWeb SDK already includes the Web Forms markup as Content (see EnableWebFormsDefaultItems).
+      Hand those files to the compiler as AdditionalFiles so the generator can see them.
+      If EnableWebFormsDefaultItems is false, add the markup files as AdditionalFiles in the project instead.
+    -->
+    <_WebFormsMarkupFiles Include="@(Content)" Condition="'%(Extension)'=='.aspx' OR '%(Extension)'=='.ascx' OR '%(Extension)'=='.master'" />
+    <_WebFormsMarkupFiles Include="Web.config" Condition="Exists('Web.config')" />
+    <AdditionalFiles Remove="@(_WebFormsMarkupFiles)" />
+    <AdditionalFiles Include="@(_WebFormsMarkupFiles)" />
+
+    <CompilerVisibleProperty Include="MSBuildProjectDirectory" />
+    <CompilerVisibleProperty Include="RootNamespace" />
+  </ItemGroup>
+
+  <Target Name="_MSBuildSDKSystemWebWebFormsCheckSdk" BeforeTargets="BeforeBuild;CoreCompile" Condition="'$(UsingMSBuildSDKSystemWeb)'!='true'">
+    <Error Code="SWWF900" Text="MSBuild.SDK.SystemWeb.WebForms must be used together with the MSBuild.SDK.SystemWeb project SDK (&lt;Project Sdk=&quot;MSBuild.SDK.SystemWeb&quot;&gt;)." />
+  </Target>
+</Project>
