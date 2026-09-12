@@ -33,6 +33,9 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Resolution
         /// <summary>False when System.Web is not referenced (e.g. a design-time build before restore): generate nothing.</summary>
         public bool HasSystemWeb => Control is not null;
 
+        /// <summary>True when the type is declared in the project being compiled, i.e. a partial declaration can be added to it.</summary>
+        public bool IsInThisCompilation(INamedTypeSymbol type) => SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, _compilation.Assembly);
+
         public static TypeResolver Get(Compilation compilation)
         {
             return Cache.GetValue(compilation, static c => new TypeResolver(c));

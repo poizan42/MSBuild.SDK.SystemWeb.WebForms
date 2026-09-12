@@ -34,11 +34,20 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator
         public static readonly DiagnosticDescriptor ReferencedMarkupNotFound = new(
             id: "SWWF004",
             title: "Referenced markup file not found",
-            messageFormat: "The markup file '{0}' referenced from '{1}' ({2}) was not found among the project's markup files; '{3}' cannot be typed",
+            messageFormat: "The markup file '{0}' referenced from '{1}' ({2}) was not found among the project's markup files; the exact type of '{3}' cannot be determined and {4}",
             category: Category,
             defaultSeverity: DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
             description: "Master pages and user controls are resolved through the AdditionalFiles the SDK passes to the compiler. Files outside the project, or excluded from Content, cannot be resolved.");
+
+        public static readonly DiagnosticDescriptor CodeBehindClassInOtherAssembly = new(
+            id: "SWWF006",
+            title: "Code-behind class is declared in another assembly",
+            messageFormat: "The class '{0}' that '{1}' inherits is declared in assembly '{2}', not in this project; designer code cannot be added to it",
+            category: Category,
+            defaultSeverity: DiagnosticSeverity.Info,
+            isEnabledByDefault: true,
+            description: "Designer code is a partial class declaration and can only extend a class declared in the project being compiled.");
 
         public static readonly DiagnosticDescriptor CodeBehindClassNotFound = new(
             id: "SWWF005",

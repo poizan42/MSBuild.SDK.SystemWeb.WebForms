@@ -42,8 +42,8 @@ For every `.aspx`, `.ascx` and `.master` file that has an `Inherits` attribute, 
 
 - `protected` fields for every element with `runat="server"` and an `ID`, typed through the project's own compilation:
   `asp:` controls, controls registered with `<%@ Register %>` or Web.config `pages/controls`, `[assembly: TagPrefix]` registrations
-  (for example `asp:ScriptManager` from System.Web.Extensions), user controls (typed as their code-behind class), and HTML controls
-  (`form`, `head`, `input type="..."`, `div`, ...).
+  (for example `asp:ScriptManager` from System.Web.Extensions), user controls (typed as their code-behind class, or as
+  `System.Web.UI.UserControl` for inline user controls without one), and HTML controls (`form`, `head`, `input type="..."`, `div`, ...).
 - Controls inside multi-instance templates (`Repeater` / `GridView` `ItemTemplate`, `TemplateField`, ...) get no fields; controls inside
   single-instance templates (`UpdatePanel.ContentTemplate`, `WizardStep`, ...) do, exactly as Visual Studio does.
 - A member that the code-behind (or a base class, or a legacy `.designer.cs`) already declares is skipped, so you can take control of a
@@ -70,8 +70,9 @@ If you turned those off, add your markup files as `AdditionalFiles` yourself.
 | `SWWF001` | Warning | The type of a server control could not be resolved (prefix not registered, or type not in the referenced assemblies). No field is generated for it. |
 | `SWWF002` | Warning | The page has `CodeBehind`/`CodeFile` but no `Inherits`; nothing is generated for it. |
 | `SWWF003` | Warning / Info | A problem while parsing the markup (invalid identifier as `ID`, server-side include, parse timeout, malformed Web.config). |
-| `SWWF004` | Warning | A master page or user control referenced by virtual path was not found among the project's markup files. |
+| `SWWF004` | Warning | A master page or user control referenced by virtual path was not found among the project's markup files. A missing user control is typed as `System.Web.UI.UserControl`; a missing master page gets no typed `Master` property. |
 | `SWWF005` | Info | The code-behind class named by `Inherits` is not in the compilation; the partial class is generated from the attribute anyway. |
+| `SWWF006` | Info | The class named by `Inherits` lives in a referenced assembly, so no partial class can be generated for it. |
 
 ## Known limitations
 

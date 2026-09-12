@@ -340,6 +340,43 @@ public class DesignerGeneratorTests
     }
 
     [NetFx48Fact]
+    public void Code_behind_class_in_a_referenced_assembly_generates_nothing_with_SWWF006()
+    {
+        var result = new GeneratorTestHost()
+            .WithMarkup("Default.aspx", "<%@ Page Language=\"C#\" CodeBehind=\"Default.aspx.cs\" Inherits=\"System.Web.UI.Page\" %><asp:Label ID=\"a\" runat=\"server\" />")
+            .Run();
+
+        var diagnostic = DesignerAssert.HasDiagnostic(result, "SWWF006");
+        Assert.Equal(DiagnosticSeverity.Info, diagnostic.Severity);
+        Assert.Contains("System.Web", diagnostic.GetMessage());
+        Assert.Empty(result.HintNames);
+        DesignerAssert.Compiles(result);
+    }
+
+    [NetFx48Fact]
+    public void User_controls_without_code_behind_or_missing_are_typed_as_UserControl()
+    {
+        var result = new GeneratorTestHost()
+            .WithMarkup("Default.aspx",
+                PageDirective +
+                "<%@ Register TagPrefix=\"uc\" TagName=\"Inline\" Src=\"~/Controls/Inline.ascx\" %>" +
+                "<%@ Register TagPrefix=\"uc\" TagName=\"Missing\" Src=\"~/Controls/Missing.ascx\" %>" +
+                "<form id=\"form1\" runat=\"server\"><uc:Inline ID=\"inline1\" runat=\"server\" /><uc:Missing ID=\"missing1\" runat=\"server\" /></form>")
+            .WithMarkup("Controls/Inline.ascx", "<%@ Control Language=\"C#\" %><asp:Label ID=\"lbl\" runat=\"server\" /><script runat=\"server\">void Page_Load(object s, System.EventArgs e) { }</script>")
+            .WithSource("Default.aspx.cs", DefaultCodeBehind)
+            .Run();
+
+        var diagnostic = DesignerAssert.HasDiagnostic(result, "SWWF004");
+        Assert.Contains("Missing.ascx", diagnostic.GetMessage());
+        Assert.Single(result.GeneratorDiagnostics);
+        var source = result.GetSource(DefaultHint);
+        DesignerAssert.HasField(source, "global::System.Web.UI.UserControl", "inline1");
+        DesignerAssert.HasField(source, "global::System.Web.UI.UserControl", "missing1");
+        Assert.False(result.HasSource("Controls_Inline.ascx.designer.g.cs"));
+        DesignerAssert.Compiles(result);
+    }
+
+    [NetFx48Fact]
     public void Without_System_Web_nothing_is_generated_and_nothing_is_reported()
     {
         var result = Page("<asp:Label ID=\"a\" runat=\"server\" />", "namespace WebApp { public partial class _Default { } }").Run(referenceSystemWeb: false);

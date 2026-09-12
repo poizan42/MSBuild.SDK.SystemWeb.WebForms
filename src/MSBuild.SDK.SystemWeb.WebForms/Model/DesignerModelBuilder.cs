@@ -81,7 +81,13 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
                 return null;
             }
 
-            var (ns, className) = ResolveCodeBehindClass(inherits!, main!.Position);
+            var codeBehind = ResolveCodeBehindClass(inherits!, main!.Position);
+            if (codeBehind is null)
+            {
+                return null;
+            }
+
+            var (ns, className) = codeBehind.Value;
 
             foreach (var child in _document.Root.Children)
             {
@@ -99,11 +105,19 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
             return new DesignerModel(ns, className, EquatableArray<DesignerField>.From(_fields), master, previousPage);
         }
 
-        private (string? Namespace, string ClassName) ResolveCodeBehindClass(string inherits, int position)
+        private (string? Namespace, string ClassName)? ResolveCodeBehindClass(string inherits, int position)
         {
             _classSymbol = FindClass(inherits);
             if (_classSymbol is not null)
             {
+                if (!_resolver.IsInThisCompilation(_classSymbol))
+                {
+                    // A partial declaration can only extend a class in this project; emitting one for a library type
+                    // would declare a second, conflicting type. Visual Studio cannot generate anything here either.
+                    Report(Diagnostics.CodeBehindClassInOtherAssembly, position, null, inherits, _document.RelativePath, _classSymbol.ContainingAssembly.Name);
+                    return null;
+                }
+
                 var containing = _classSymbol.ContainingNamespace;
                 var ns = containing is null || containing.IsGlobalNamespace ? null : containing.ToDisplayString();
                 return (ns, _classSymbol.Name);
@@ -232,19 +246,31 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
         {
             var relativePath = VirtualPathResolver.Resolve(registration.Src, _document.RelativePath);
             var summary = _index.Find(relativePath);
-            if (summary is null || summary.Inherits is null)
+            if (summary is null)
             {
                 if (element.RunAtServer && element.Id is not null)
                 {
-                    Report(Diagnostics.ReferencedMarkupNotFound, element.Position, null, registration.Src ?? string.Empty, _document.RelativePath, "<%@ Register %>", element.Id);
+                    Report(Diagnostics.ReferencedMarkupNotFound, element.Position, null, registration.Src ?? string.Empty, _document.RelativePath, "<%@ Register %>", element.Id, "the field is typed as System.Web.UI.UserControl");
                 }
 
-                // Still count as resolved so no SWWF001 is reported on top of SWWF004; a null symbol keeps children untyped.
-                return null;
+                return UserControlFallback();
+            }
+
+            if (summary.Inherits is null)
+            {
+                // An inline user control (no code-behind) compiles to a runtime-generated class; UserControl is the best static type.
+                return UserControlFallback();
             }
 
             var symbol = FindClass(summary.Inherits);
             return (symbol, symbol is not null ? Display(symbol) : QualifyFallback(summary.Inherits));
+        }
+
+        private (INamedTypeSymbol? Symbol, string TypeText) UserControlFallback()
+        {
+            const string UserControl = "System.Web.UI.UserControl";
+            var symbol = _resolver.GetTypeByMetadataName(UserControl);
+            return (symbol, symbol is not null ? Display(symbol) : "global::" + UserControl);
         }
 
         private TypedProperty? BuildTypedProperty(string directiveName, string propertyName)
@@ -284,7 +310,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
             var summary = _index.Find(relativePath);
             if (summary is null || summary.Inherits is null)
             {
-                Report(Diagnostics.ReferencedMarkupNotFound, directive.Position, null, virtualPath!.Trim(), _document.RelativePath, "<%@ " + directiveName + " %>", propertyName);
+                Report(Diagnostics.ReferencedMarkupNotFound, directive.Position, null, virtualPath!.Trim(), _document.RelativePath, "<%@ " + directiveName + " %>", propertyName, "the typed property is not generated");
                 return null;
             }
 
