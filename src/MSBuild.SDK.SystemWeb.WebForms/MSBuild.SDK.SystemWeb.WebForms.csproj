@@ -32,6 +32,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="MSBuild.SDK.SystemWeb.WebForms.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="version.json" />
     <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
     <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />

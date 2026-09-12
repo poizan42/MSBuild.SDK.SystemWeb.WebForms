@@ -1,9 +1,6 @@
 using System;
-using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
-using MSBuild.SDK.SystemWeb.WebForms.Generator.Emit;
-using MSBuild.SDK.SystemWeb.WebForms.Generator.Model;
 using MSBuild.SDK.SystemWeb.WebForms.Generator.Parsing;
 using MSBuild.SDK.SystemWeb.WebForms.Generator.Resolution;
 
@@ -86,14 +83,33 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator
             GeneratorOptions options,
             Compilation compilation)
         {
-            var model = DesignerModelBuilder.Build(document, index, webConfig, options, compilation, context.ReportDiagnostic);
-            if (model is null)
+            var output = DocumentCache.GetOrCompute(document, index, webConfig, options, compilation);
+
+            foreach (var info in output.Diagnostics)
             {
-                return;
+                context.ReportDiagnostic(CreateDiagnostic(document, info));
             }
 
-            var source = CSharpDesignerEmitter.Emit(model, document.RelativePath);
-            context.AddSource(HintNames.ForMarkup(document.RelativePath), SourceText.From(source, Encoding.UTF8));
+            if (output.Source is not null)
+            {
+                context.AddSource(output.HintName, output.Source);
+            }
+        }
+
+        private static Diagnostic CreateDiagnostic(MarkupDocument document, DiagnosticInfo info)
+        {
+            var position = Math.Max(0, Math.Min(info.Position, document.TextLength));
+            var linePosition = document.GetLinePosition(position);
+            var location = Location.Create(document.FilePath, new TextSpan(position, 0), new LinePositionSpan(linePosition, linePosition));
+            var args = new object[info.Arguments.Count];
+            for (var i = 0; i < args.Length; i++)
+            {
+                args[i] = info.Arguments[i];
+            }
+
+            return info.SeverityOverride is null
+                ? Diagnostic.Create(info.Descriptor, location, args)
+                : Diagnostic.Create(info.Descriptor, location, info.SeverityOverride.Value, additionalLocations: null, properties: null, messageArgs: args);
         }
 
         private static bool IsWebConfig(string path)

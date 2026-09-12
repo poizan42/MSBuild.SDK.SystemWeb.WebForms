@@ -41,6 +41,12 @@ public sealed class GeneratorTestHost
         return this;
     }
 
+    public GeneratorTestHost WithSyntaxTree(SyntaxTree tree)
+    {
+        _syntaxTrees.Add(tree);
+        return this;
+    }
+
     public GeneratorTestResult Run(bool referenceSystemWeb = true)
     {
         var references = referenceSystemWeb

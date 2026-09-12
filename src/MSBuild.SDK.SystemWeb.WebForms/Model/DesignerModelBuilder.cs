@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.Text;
 using MSBuild.SDK.SystemWeb.WebForms.Generator.Parsing;
 using MSBuild.SDK.SystemWeb.WebForms.Generator.Registry;
 using MSBuild.SDK.SystemWeb.WebForms.Generator.Resolution;
@@ -18,15 +17,20 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
     /// </summary>
     public sealed class DesignerModelBuilder
     {
+        /// <summary>Number of walks performed in this process; lets tests verify that cached documents skip the walk.</summary>
+        internal static int WalkCount;
+
         private readonly MarkupDocument _document;
         private readonly MarkupIndex _index;
         private readonly GeneratorOptions _options;
         private readonly TypeResolver _resolver;
         private readonly TagRegistry _registry;
-        private readonly Action<Diagnostic> _report;
+        private readonly List<DiagnosticInfo> _diagnostics = new();
+        private readonly HashSet<ISymbol> _dependencies = new(SymbolEqualityComparer.Default);
         private readonly List<DesignerField> _fields = new();
         private readonly HashSet<string> _fieldNames = new(StringComparer.Ordinal);
         private INamedTypeSymbol? _classSymbol;
+        private bool _cacheable = true;
 
         private DesignerModelBuilder(
             MarkupDocument document,
@@ -34,32 +38,60 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
             WebConfigRegistrations webConfig,
             GeneratorOptions options,
             Compilation compilation,
-            TypeResolver resolver,
-            Action<Diagnostic> report)
+            TypeResolver resolver)
         {
             _document = document;
             _index = index;
             _options = options;
             _resolver = resolver;
             _registry = TagRegistry.Create(document, webConfig, AssemblyTagPrefixIndex.Get(compilation));
-            _report = report;
         }
 
-        public static DesignerModel? Build(
+        public static BuildResult Build(
             MarkupDocument document,
             MarkupIndex index,
             WebConfigRegistrations webConfig,
             GeneratorOptions options,
-            Compilation compilation,
-            Action<Diagnostic> report)
+            Compilation compilation)
         {
             var resolver = TypeResolver.Get(compilation);
             if (!resolver.HasSystemWeb)
             {
-                return null;
+                // Design-time build before restore: nothing to resolve against, and nothing worth caching.
+                return new BuildResult(null, ImmutableArray<DiagnosticInfo>.Empty, ImmutableArray<SyntaxTree>.Empty, IsCacheable: false);
             }
 
-            return new DesignerModelBuilder(document, index, webConfig, options, compilation, resolver, report).Build();
+            System.Threading.Interlocked.Increment(ref WalkCount);
+            var builder = new DesignerModelBuilder(document, index, webConfig, options, compilation, resolver);
+            var model = builder.Build();
+            return new BuildResult(model, builder._diagnostics.ToImmutableArray(), builder.CollectDependentTrees(), builder._cacheable);
+        }
+
+        /// <summary>The syntax trees that declare every source symbol the walk consulted (metadata symbols have none).</summary>
+        private ImmutableArray<SyntaxTree> CollectDependentTrees()
+        {
+            var trees = new HashSet<SyntaxTree>();
+            foreach (var symbol in _dependencies)
+            {
+                foreach (var reference in symbol.DeclaringSyntaxReferences)
+                {
+                    trees.Add(reference.SyntaxTree);
+                }
+            }
+
+            return trees.ToImmutableArray();
+        }
+
+        /// <summary>Records a type (and its base types, which member and property lookups walk) as a dependency of this document.</summary>
+        private void DependOn(INamedTypeSymbol? type)
+        {
+            for (INamedTypeSymbol? current = type; current is not null; current = current.BaseType)
+            {
+                if (!_dependencies.Add(current.OriginalDefinition))
+                {
+                    return;
+                }
+            }
         }
 
         private DesignerModel? Build()
@@ -110,6 +142,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
             _classSymbol = FindClass(inherits);
             if (_classSymbol is not null)
             {
+                DependOn(_classSymbol);
                 if (!_resolver.IsInThisCompilation(_classSymbol))
                 {
                     // A partial declaration can only extend a class in this project; emitting one for a library type
@@ -275,6 +308,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
                     var symbol = _resolver.FindType(registration.Namespace!, element.LocalName);
                     if (symbol is not null)
                     {
+                        DependOn(symbol);
                         return (symbol, Display(symbol));
                     }
                 }
@@ -304,6 +338,13 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
             }
 
             var symbol = FindClass(summary.Inherits);
+            if (symbol is null)
+            {
+                // The class may appear in a later edit; do not cache a guess.
+                _cacheable = false;
+            }
+
+            DependOn(symbol);
             return (symbol, symbol is not null ? Display(symbol) : QualifyFallback(summary.Inherits));
         }
 
@@ -338,6 +379,12 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
             if (!string.IsNullOrEmpty(typeName))
             {
                 var symbol = FindClass(typeName!);
+                if (symbol is null)
+                {
+                    _cacheable = false;
+                }
+
+                DependOn(symbol);
                 return new TypedProperty(propertyName, symbol is not null ? Display(symbol) : QualifyFallback(typeName!));
             }
 
@@ -356,6 +403,12 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
             }
 
             var masterSymbol = FindClass(summary.Inherits);
+            if (masterSymbol is null)
+            {
+                _cacheable = false;
+            }
+
+            DependOn(masterSymbol);
             return new TypedProperty(propertyName, masterSymbol is not null ? Display(masterSymbol) : QualifyFallback(summary.Inherits));
         }
 
@@ -394,20 +447,24 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
 
         private static string Display(INamedTypeSymbol symbol) => symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-        private void Report(DiagnosticDescriptor descriptor, int position, DiagnosticSeverity? severityOverride, params object[] args)
+        private void Report(DiagnosticDescriptor descriptor, int position, DiagnosticSeverity? severityOverride, params string[] args)
         {
-            var location = CreateLocation(position);
-            var diagnostic = severityOverride is null
-                ? Diagnostic.Create(descriptor, location, args)
-                : Diagnostic.Create(descriptor, location, severityOverride.Value, additionalLocations: null, properties: null, messageArgs: args);
-            _report(diagnostic);
-        }
+            // A failed lookup may succeed after the next edit anywhere in the project, so such results are never cached.
+            if (ReferenceEquals(descriptor, Diagnostics.UnresolvedControlType)
+                || ReferenceEquals(descriptor, Diagnostics.ReferencedMarkupNotFound)
+                || ReferenceEquals(descriptor, Diagnostics.CodeBehindClassNotFound))
+            {
+                _cacheable = false;
+            }
 
-        private Location CreateLocation(int position)
-        {
-            var clamped = Math.Max(0, Math.Min(position, _document.TextLength));
-            var linePosition = _document.GetLinePosition(clamped);
-            return Location.Create(_document.FilePath, new TextSpan(clamped, 0), new LinePositionSpan(linePosition, linePosition));
+            _diagnostics.Add(new DiagnosticInfo(descriptor, position, severityOverride, EquatableArray<string>.From(args)));
         }
     }
+
+    /// <summary>The outcome of walking one document, plus what it depended on so the result can be cached.</summary>
+    public sealed record BuildResult(
+        DesignerModel? Model,
+        ImmutableArray<DiagnosticInfo> Diagnostics,
+        ImmutableArray<SyntaxTree> DependentTrees,
+        bool IsCacheable);
 }
