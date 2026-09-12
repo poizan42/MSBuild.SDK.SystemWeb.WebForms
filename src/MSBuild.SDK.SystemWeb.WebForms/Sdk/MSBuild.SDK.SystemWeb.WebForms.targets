@@ -13,7 +13,9 @@
       Hand those files to the compiler as AdditionalFiles so the generator can see them.
       If EnableWebFormsDefaultItems is false, add the markup files as AdditionalFiles in the project instead.
     -->
-    <_WebFormsMarkupFiles Include="@(Content)" Condition="'%(Extension)'=='.aspx' OR '%(Extension)'=='.ascx' OR '%(Extension)'=='.master'" />
+    <_WebFormsMarkupFiles Include="@(Content->WithMetadataValue('Extension', '.aspx'))" />
+    <_WebFormsMarkupFiles Include="@(Content->WithMetadataValue('Extension', '.ascx'))" />
+    <_WebFormsMarkupFiles Include="@(Content->WithMetadataValue('Extension', '.master'))" />
     <_WebFormsMarkupFiles Include="Web.config" Condition="Exists('Web.config')" />
     <AdditionalFiles Remove="@(_WebFormsMarkupFiles)" />
     <AdditionalFiles Include="@(_WebFormsMarkupFiles)" />

@@ -131,13 +131,33 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Resolution
                     continue;
                 }
 
-                if (attribute.ConstructorArguments.Length == 1 && attribute.ConstructorArguments[0].Value is int value)
+                if (attribute.ConstructorArguments.Length == 1)
                 {
-                    return value == 0; // System.Web.UI.TemplateInstance.Single
+                    var argument = attribute.ConstructorArguments[0];
+                    return argument.Value is not null && Equals(argument.Value, GetEnumValue(argument.Type as INamedTypeSymbol, "Single"));
                 }
             }
 
             return false;
+        }
+
+        /// <summary>The constant value of an enum member, looked up by name so we do not depend on the numeric values (TemplateInstance.Multiple is 0, Single is 1).</summary>
+        private static object? GetEnumValue(INamedTypeSymbol? enumType, string memberName)
+        {
+            if (enumType is null)
+            {
+                return null;
+            }
+
+            foreach (var member in enumType.GetMembers(memberName))
+            {
+                if (member is IFieldSymbol { HasConstantValue: true } field)
+                {
+                    return field.ConstantValue;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>True when the class or a base class already declares a non-private member with this name.</summary>

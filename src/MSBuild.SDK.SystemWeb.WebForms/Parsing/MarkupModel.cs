@@ -92,15 +92,20 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Parsing
                 return new LinePosition(0, 0);
             }
 
-            var index = starts.BinarySearch(position);
-            if (index < 0)
+            // Last line start that is <= position.
+            int low = 0, high = starts.Length - 1, index = 0;
+            while (low <= high)
             {
-                index = ~index - 1;
-            }
-
-            if (index < 0)
-            {
-                index = 0;
+                var mid = low + ((high - low) / 2);
+                if (starts[mid] <= position)
+                {
+                    index = mid;
+                    low = mid + 1;
+                }
+                else
+                {
+                    high = mid - 1;
+                }
             }
 
             return new LinePosition(index, position - starts[index]);

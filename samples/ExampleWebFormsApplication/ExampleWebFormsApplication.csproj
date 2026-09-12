@@ -1,0 +1,26 @@
+<Project Sdk="MSBuild.SDK.SystemWeb">
+  <!--
+    Development loop for the generator: import the WebForms SDK files straight from the source tree and use the
+    generator project output as the analyzer. A published consumer just adds <Sdk Name="MSBuild.SDK.SystemWeb.WebForms" />.
+  -->
+  <Import Project="..\..\src\MSBuild.SDK.SystemWeb.WebForms\Sdk\Sdk.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>ExampleWebFormsApplication</RootNamespace>
+    <!-- Write the generated designer files to obj\GeneratedFiles so they can be inspected. -->
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)GeneratedFiles</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Web.Extensions" />
+    <None Include="Properties\launchSettings.json" />
+    <ProjectReference Include="..\..\src\MSBuild.SDK.SystemWeb.WebForms\MSBuild.SDK.SystemWeb.WebForms.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      SetTargetFramework="TargetFramework=netstandard2.0" />
+  </ItemGroup>
+
+  <Import Project="..\..\src\MSBuild.SDK.SystemWeb.WebForms\Sdk\Sdk.targets" />
+</Project>
