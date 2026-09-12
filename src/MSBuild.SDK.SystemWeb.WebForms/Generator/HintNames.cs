@@ -2,7 +2,7 @@ using System.Text;
 
 namespace MSBuild.SDK.SystemWeb.WebForms.Generator
 {
-    internal static class HintNames
+    public static class HintNames
     {
         /// <summary>
         /// <c>Controls/Hello.ascx</c> becomes <c>Controls_Hello.ascx.designer.g.cs</c>.

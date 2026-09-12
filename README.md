@@ -30,6 +30,7 @@ Prototype. C# projects only; the parser and model are language neutral, a VB emi
 | `src/MSBuild.SDK.SystemWeb.WebForms` | The generator (`netstandard2.0`, Roslyn 4.8) and the SDK package. `Sdk/` holds the props/targets that register the generator as an analyzer and hand the markup files to the compiler; the built DLL is packed to `analyzers/dotnet/cs`. |
 | `tests/MSBuild.SDK.SystemWeb.WebForms.Tests` | xunit tests. Parser tests are self-contained; generator tests run the generator over an in-memory project compiled against the .NET Framework 4.8 reference assemblies and check that the generated code compiles against the real `System.Web`. |
 | `samples/ExampleWebFormsApplication` | A Web Forms application (master page, content page, user control, Web.config registrations, templates) with no designer files. It imports the SDK files from the source tree and uses the generator project as an analyzer, so it always exercises the current code. |
+| `tools/DesignerCompare` | Runs the generator over an existing Web Forms project and compares the result, field by field, with the `*.designer.cs` files Visual Studio maintained. See below. |
 
 ## How it works
 
@@ -62,3 +63,18 @@ and reference `<Sdk Name="KfbSoft.MSBuild.SDK.SystemWeb.WebForms" Version="..." 
 
 Note for generator development: Visual Studio does not reload a rebuilt generator assembly until it is restarted; command-line builds
 always pick up the new build.
+
+## Checking parity against an existing project
+
+`tools/DesignerCompare` is the parity test: point it at a Web Application Project (or a project-less Web Site) and it compiles the
+project's sources (code-behind, `App_Code`, every DLL in `bin\` except the project's own output) against the .NET Framework 4.8 reference
+assemblies, runs the generator, and compares each generated designer with the checked-in `*.designer.cs` file, reporting missing fields,
+extra fields and type mismatches per page, plus all generator diagnostics.
+
+```bash
+dotnet run --project tools/DesignerCompare -- "C:\path\to\WebApplication" --out report.md
+```
+
+The project's own designer files are excluded from the compilation so the generator produces complete designers; their content is the
+expected result. Web Sites have no designer files, so for them the tool only reports diagnostics and pages without output.
+Options: `--root-namespace`, `--exclude-ref <name>` (repeatable), `--refs <reference assemblies dir>`, `--show-all`.
