@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.CodeAnalysis.CSharp;
 using MSBuild.SDK.SystemWeb.WebForms.Generator.Model;
 
 namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Emit
@@ -31,7 +32,13 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Emit
                 indent = "    ";
             }
 
-            sb.Append(indent).Append("partial class ").Append(model.ClassName).Append(" {").Append(NewLine);
+            foreach (var containingType in model.ContainingTypes)
+            {
+                sb.Append(indent).Append("partial class ").Append(Escape(containingType)).Append(" {").Append(NewLine);
+                indent += "    ";
+            }
+
+            sb.Append(indent).Append("partial class ").Append(Escape(model.ClassName)).Append(" {").Append(NewLine);
 
             var memberIndent = indent + "    ";
             foreach (var field in model.Fields)
@@ -44,19 +51,31 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Emit
                 sb.Append(memberIndent).Append("/// Auto-generated field.").Append(NewLine);
                 sb.Append(memberIndent).Append("/// To modify move field declaration from designer file to code-behind file.").Append(NewLine);
                 sb.Append(memberIndent).Append("/// </remarks>").Append(NewLine);
-                sb.Append(memberIndent).Append("protected ").Append(field.FullyQualifiedType).Append(' ').Append(field.Name).Append(';').Append(NewLine);
+                sb.Append(memberIndent).Append("protected ").Append(field.FullyQualifiedType).Append(' ').Append(Escape(field.Name)).Append(';').Append(NewLine);
             }
 
             AppendTypedProperty(sb, memberIndent, model.Master);
             AppendTypedProperty(sb, memberIndent, model.PreviousPage);
 
             sb.Append(indent).Append('}').Append(NewLine);
-            if (indent.Length > 0)
+            for (var i = 0; i < model.ContainingTypes.Count; i++)
+            {
+                indent = indent.Substring(4);
+                sb.Append(indent).Append('}').Append(NewLine);
+            }
+
+            if (!string.IsNullOrEmpty(model.Namespace))
             {
                 sb.Append('}').Append(NewLine);
             }
 
             return sb.ToString();
+        }
+
+        /// <summary>Prefixes reserved keywords with <c>@</c> so an <c>ID="class"</c> still yields a legal field.</summary>
+        private static string Escape(string identifier)
+        {
+            return SyntaxFacts.GetKeywordKind(identifier) != SyntaxKind.None ? "@" + identifier : identifier;
         }
 
         private static void AppendTypedProperty(StringBuilder sb, string indent, TypedProperty? property)

@@ -16,7 +16,11 @@
     <_WebFormsMarkupFiles Include="@(Content->WithMetadataValue('Extension', '.aspx'))" />
     <_WebFormsMarkupFiles Include="@(Content->WithMetadataValue('Extension', '.ascx'))" />
     <_WebFormsMarkupFiles Include="@(Content->WithMetadataValue('Extension', '.master'))" />
-    <_WebFormsMarkupFiles Include="Web.config" Condition="Exists('Web.config')" />
+    <!--
+      Every Web.config: the root one applies to all markup, one in a subfolder only to the markup below it (ASP.NET configuration inheritance).
+      DefaultItemExcludes deliberately is not used here: MSBuild.SDK.SystemWeb adds web.config to it.
+    -->
+    <_WebFormsMarkupFiles Include="**\Web.config" Exclude="$(DefaultWebFormsItemExcludes);$(BaseOutputPath)**;$(BaseIntermediateOutputPath)**;**\node_modules\**" />
     <AdditionalFiles Remove="@(_WebFormsMarkupFiles)" />
     <AdditionalFiles Include="@(_WebFormsMarkupFiles)" />
 

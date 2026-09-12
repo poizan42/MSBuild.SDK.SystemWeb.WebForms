@@ -44,6 +44,10 @@ For every `.aspx`, `.ascx` and `.master` file that has an `Inherits` attribute, 
   `asp:` controls, controls registered with `<%@ Register %>` or Web.config `pages/controls`, `[assembly: TagPrefix]` registrations
   (for example `asp:ScriptManager` from System.Web.Extensions), user controls (typed as their code-behind class, or as
   `System.Web.UI.UserControl` for inline user controls without one), and HTML controls (`form`, `head`, `input type="..."`, `div`, ...).
+  `<title>`, `<link>` and `<meta>` directly inside a server-side `<head>` are controls too, as in ASP.NET.
+- Web.config registrations follow ASP.NET configuration inheritance: the root `Web.config` applies everywhere, a `Web.config` in a
+  subfolder or a `<location path="...">` element only to the markup below that folder.
+- IDs that are C# keywords are escaped (`ID="class"` becomes `@class`); nested code-behind classes get nested partial declarations.
 - Controls inside multi-instance templates (`Repeater` / `GridView` `ItemTemplate`, `TemplateField`, ...) get no fields; controls inside
   single-instance templates (`UpdatePanel.ContentTemplate`, `WizardStep`, ...) do, exactly as Visual Studio does.
 - A member that the code-behind (or a base class, or a legacy `.designer.cs`) already declares is skipped, so you can take control of a

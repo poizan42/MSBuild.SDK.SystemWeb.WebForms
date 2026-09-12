@@ -43,7 +43,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Registry
                 }
             }
 
-            registry._registrations.AddRange(webConfig.Registrations);
+            registry._registrations.AddRange(webConfig.ForDocument(document.RelativePath));
             registry._registrations.AddRange(assemblies.Registrations);
             return registry;
         }

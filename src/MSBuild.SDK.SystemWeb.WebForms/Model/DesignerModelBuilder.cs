@@ -87,11 +87,11 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
                 return null;
             }
 
-            var (ns, className) = codeBehind.Value;
+            var (ns, containingTypes, className) = codeBehind.Value;
 
             foreach (var child in _document.Root.Children)
             {
-                Visit(child, null);
+                Visit(child, null, inServerHead: false);
             }
 
             TypedProperty? master = null;
@@ -102,10 +102,10 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
                 previousPage = BuildTypedProperty("PreviousPageType", "PreviousPage");
             }
 
-            return new DesignerModel(ns, className, EquatableArray<DesignerField>.From(_fields), master, previousPage);
+            return new DesignerModel(ns, containingTypes, className, EquatableArray<DesignerField>.From(_fields), master, previousPage);
         }
 
-        private (string? Namespace, string ClassName)? ResolveCodeBehindClass(string inherits, int position)
+        private (string? Namespace, EquatableArray<string> ContainingTypes, string ClassName)? ResolveCodeBehindClass(string inherits, int position)
         {
             _classSymbol = FindClass(inherits);
             if (_classSymbol is not null)
@@ -120,27 +120,65 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
 
                 var containing = _classSymbol.ContainingNamespace;
                 var ns = containing is null || containing.IsGlobalNamespace ? null : containing.ToDisplayString();
-                return (ns, _classSymbol.Name);
+
+                var containingTypes = new List<string>();
+                for (var outer = _classSymbol.ContainingType; outer is not null; outer = outer.ContainingType)
+                {
+                    containingTypes.Insert(0, outer.Name);
+                }
+
+                return (ns, EquatableArray<string>.From(containingTypes), _classSymbol.Name);
             }
 
             Report(Diagnostics.CodeBehindClassNotFound, position, null, inherits, _document.RelativePath);
 
             var dot = inherits.LastIndexOf('.');
-            return dot < 0 ? (null, inherits) : (inherits.Substring(0, dot), inherits.Substring(dot + 1));
+            return dot < 0
+                ? (null, EquatableArray<string>.Empty, inherits)
+                : (inherits.Substring(0, dot), EquatableArray<string>.Empty, inherits.Substring(dot + 1));
         }
 
+        /// <summary>
+        /// Finds the class named in markup. Markup uses dots throughout (<c>Ns.Outer.Inner</c>), so for nested classes
+        /// the trailing dots are progressively tried as nesting separators (<c>Ns.Outer+Inner</c>).
+        /// </summary>
         private INamedTypeSymbol? FindClass(string name)
         {
-            var symbol = _resolver.GetTypeByMetadataName(name);
-            if (symbol is null && _options.RootNamespace is not null && name.IndexOf('.') < 0)
+            foreach (var candidate in MetadataNameCandidates(name))
             {
-                symbol = _resolver.GetTypeByMetadataName(_options.RootNamespace + "." + name);
+                var symbol = _resolver.GetTypeByMetadataName(candidate);
+                if (symbol is not null)
+                {
+                    return symbol;
+                }
+
+                if (_options.RootNamespace is not null)
+                {
+                    symbol = _resolver.GetTypeByMetadataName(_options.RootNamespace + "." + candidate);
+                    if (symbol is not null)
+                    {
+                        return symbol;
+                    }
+                }
             }
 
-            return symbol;
+            return null;
         }
 
-        private void Visit(MarkupElement element, INamedTypeSymbol? containerType)
+        private static IEnumerable<string> MetadataNameCandidates(string name)
+        {
+            yield return name;
+
+            var parts = name.Split('.');
+            for (var nested = 1; nested < parts.Length; nested++)
+            {
+                var outer = string.Join(".", parts, 0, parts.Length - nested);
+                var inner = string.Join("+", parts, parts.Length - nested, nested);
+                yield return outer + "+" + inner;
+            }
+        }
+
+        private void Visit(MarkupElement element, INamedTypeSymbol? containerType, bool inServerHead)
         {
             if (element.Prefix is not null)
             {
@@ -159,24 +197,27 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
 
                 foreach (var child in element.Children)
                 {
-                    Visit(child, resolved?.Symbol);
+                    Visit(child, resolved?.Symbol, inServerHead: false);
                 }
 
                 return;
             }
 
-            if (element.RunAtServer)
+            // <title>, <link> and <meta> directly inside a server-side <head> are controls even without runat="server".
+            var headChild = inServerHead ? HtmlControlTypeMap.GetHeadChildMetadataName(element.LocalName) : null;
+            if (element.RunAtServer || headChild is not null)
             {
-                var metadataName = HtmlControlTypeMap.GetMetadataName(element.LocalName, element.GetAttribute("type"));
+                var metadataName = headChild ?? HtmlControlTypeMap.GetMetadataName(element.LocalName, element.GetAttribute("type"));
                 var symbol = _resolver.GetTypeByMetadataName(metadataName);
                 if (element.Id is not null)
                 {
                     AddField(element, symbol is not null ? Display(symbol) : "global::" + metadataName);
                 }
 
+                var isServerHead = element.RunAtServer && string.Equals(element.LocalName, "head", StringComparison.OrdinalIgnoreCase);
                 foreach (var child in element.Children)
                 {
-                    Visit(child, null);
+                    Visit(child, null, isServerHead);
                 }
 
                 return;
@@ -197,7 +238,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
 
                         foreach (var child in element.Children)
                         {
-                            Visit(child, null);
+                            Visit(child, null, inServerHead: false);
                         }
 
                         return;
@@ -205,7 +246,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
 
                     foreach (var child in element.Children)
                     {
-                        Visit(child, property.Type as INamedTypeSymbol);
+                        Visit(child, property.Type as INamedTypeSymbol, inServerHead: false);
                     }
 
                     return;
@@ -214,7 +255,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
 
             foreach (var child in element.Children)
             {
-                Visit(child, null);
+                Visit(child, null, inServerHead: false);
             }
         }
 

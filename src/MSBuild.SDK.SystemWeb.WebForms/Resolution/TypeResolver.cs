@@ -126,18 +126,22 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Resolution
         /// </summary>
         public static bool IsSingleInstanceTemplate(IPropertySymbol property)
         {
-            foreach (var attribute in property.GetAttributes())
+            // The attribute is inherited: an override without its own [TemplateInstance] keeps the base declaration's value.
+            for (var current = property; current is not null; current = current.OverriddenProperty)
             {
-                var attributeClass = attribute.AttributeClass;
-                if (attributeClass is null || attributeClass.Name != "TemplateInstanceAttribute")
+                foreach (var attribute in current.GetAttributes())
                 {
-                    continue;
-                }
+                    var attributeClass = attribute.AttributeClass;
+                    if (attributeClass is null || attributeClass.Name != "TemplateInstanceAttribute")
+                    {
+                        continue;
+                    }
 
-                if (attribute.ConstructorArguments.Length == 1)
-                {
-                    var argument = attribute.ConstructorArguments[0];
-                    return argument.Value is not null && Equals(argument.Value, GetEnumValue(argument.Type as INamedTypeSymbol, "Single"));
+                    if (attribute.ConstructorArguments.Length == 1)
+                    {
+                        var argument = attribute.ConstructorArguments[0];
+                        return argument.Value is not null && Equals(argument.Value, GetEnumValue(argument.Type as INamedTypeSymbol, "Single"));
+                    }
                 }
             }
 

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Immutable;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
@@ -42,19 +41,27 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator
                 .Select(static (summaries, _) => new MarkupIndex(new EquatableArray<MarkupSummary>(summaries)))
                 .WithTrackingName("Index");
 
+            // Every Web.config in the project: the root one applies everywhere, one in a subfolder (or a <location> element)
+            // only to markup under that folder, as in ASP.NET configuration inheritance.
             var webConfig = context.AdditionalTextsProvider
                 .Where(static text => IsWebConfig(text.Path))
-                .Select(static (text, cancellationToken) => new WebConfigInput(text.Path, WebConfigParser.Parse(text.GetText(cancellationToken)?.ToString() ?? string.Empty)))
+                .Combine(options)
+                .Select(static (pair, cancellationToken) =>
+                {
+                    var (text, generatorOptions) = pair;
+                    var relativePath = generatorOptions.GetRelativePath(text.Path);
+                    return WebConfigParser.Parse(text.GetText(cancellationToken)?.ToString() ?? string.Empty, text.Path, VirtualPathResolver.GetDirectory(relativePath));
+                })
                 .Collect()
-                .Select(static (configs, _) => PickRootWebConfig(configs))
+                .Select(static (configs, _) => WebConfigRegistrations.Merge(configs))
                 .WithTrackingName("WebConfig");
 
             context.RegisterSourceOutput(webConfig, static (productionContext, config) =>
             {
-                if (config.Registrations.Problem is not null && config.Path.Length > 0)
+                foreach (var problem in config.Problems)
                 {
-                    var location = Location.Create(config.Path, new TextSpan(0, 0), new LinePositionSpan(new LinePosition(0, 0), new LinePosition(0, 0)));
-                    productionContext.ReportDiagnostic(Diagnostic.Create(Diagnostics.ParseProblem, location, VirtualPathResolver.GetFileName(config.Path), config.Registrations.Problem));
+                    var location = Location.Create(problem.Path, new TextSpan(0, 0), new LinePositionSpan(new LinePosition(0, 0), new LinePosition(0, 0)));
+                    productionContext.ReportDiagnostic(Diagnostic.Create(Diagnostics.ParseProblem, location, VirtualPathResolver.GetFileName(problem.Path), problem.Message));
                 }
             });
 
@@ -67,7 +74,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator
             context.RegisterSourceOutput(inputs, static (productionContext, input) =>
             {
                 var (((document, markupIndex), config), generatorOptions) = input.Left;
-                Execute(productionContext, document, markupIndex, config.Registrations, generatorOptions, input.Right);
+                Execute(productionContext, document, markupIndex, config, generatorOptions, input.Right);
             });
         }
 
@@ -93,22 +100,5 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator
         {
             return string.Equals(VirtualPathResolver.GetFileName(path), "web.config", StringComparison.OrdinalIgnoreCase);
         }
-
-        private static WebConfigInput PickRootWebConfig(ImmutableArray<WebConfigInput> configs)
-        {
-            // Only the root Web.config carries pages/controls registrations; if several were passed, take the shortest path.
-            WebConfigInput? best = null;
-            foreach (var config in configs)
-            {
-                if (best is null || config.Path.Length < best.Path.Length)
-                {
-                    best = config;
-                }
-            }
-
-            return best ?? new WebConfigInput(string.Empty, WebConfigRegistrations.Empty);
-        }
-
-        private sealed record WebConfigInput(string Path, WebConfigRegistrations Registrations);
     }
 }

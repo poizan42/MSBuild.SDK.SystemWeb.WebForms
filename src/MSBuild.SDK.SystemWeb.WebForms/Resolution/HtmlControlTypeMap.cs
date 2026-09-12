@@ -32,6 +32,11 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Resolution
             ["embed"] = "HtmlEmbed",
             ["area"] = "HtmlArea",
             ["html"] = "HtmlElement",
+        };
+
+        /// <summary>Children that a server-side <c>&lt;head&gt;</c> turns into controls even without <c>runat="server"</c> (see <c>HtmlHeadBuilder</c>).</summary>
+        private static readonly Dictionary<string, string> HeadChildren = new(StringComparer.OrdinalIgnoreCase)
+        {
             ["title"] = "HtmlTitle",
             ["link"] = "HtmlLink",
             ["meta"] = "HtmlMeta",
@@ -64,5 +69,11 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Resolution
         }
 
         public static string GetMetadataName(string tagName, string? inputType) => Namespace + "." + GetTypeName(tagName, inputType);
+
+        /// <summary>The control type for a direct child of a server-side <c>&lt;head&gt;</c>, or null if the child is ordinary markup.</summary>
+        public static string? GetHeadChildMetadataName(string tagName)
+        {
+            return HeadChildren.TryGetValue(tagName, out var control) ? Namespace + "." + control : null;
+        }
     }
 }

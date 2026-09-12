@@ -377,6 +377,120 @@ public class DesignerGeneratorTests
     }
 
     [NetFx48Fact]
+    public void Children_of_a_server_side_head_are_controls_but_the_same_tags_elsewhere_are_generic()
+    {
+        var result = Page(
+            "<html><head runat=\"server\" id=\"head1\">" +
+            "<title id=\"pageTitle\">t</title><meta id=\"description\" name=\"description\" content=\"x\" /><link id=\"css\" rel=\"stylesheet\" href=\"a.css\" />" +
+            "<script id=\"notAControl\" src=\"x.js\"></script>" +
+            "</head><body><form id=\"form1\" runat=\"server\"><meta id=\"bodyMeta\" runat=\"server\" /><div><title id=\"nestedTitle\">x</title></div></form></body></html>").Run();
+
+        DesignerAssert.NoDiagnostics(result);
+        var source = result.GetSource(DefaultHint);
+        DesignerAssert.HasField(source, HtmlControls + "HtmlHead", "head1");
+        DesignerAssert.HasField(source, HtmlControls + "HtmlTitle", "pageTitle");
+        DesignerAssert.HasField(source, HtmlControls + "HtmlMeta", "description");
+        DesignerAssert.HasField(source, HtmlControls + "HtmlLink", "css");
+        DesignerAssert.HasNoField(source, "notAControl");
+        DesignerAssert.HasField(source, HtmlControls + "HtmlGenericControl", "bodyMeta");
+        DesignerAssert.HasNoField(source, "nestedTitle");
+        DesignerAssert.Compiles(result);
+    }
+
+    [NetFx48Fact]
+    public void Web_config_registrations_are_scoped_to_their_folder_and_location()
+    {
+        var result = new GeneratorTestHost()
+            .WithWebConfig(
+                "<configuration>" +
+                "<system.web><pages><controls><add tagPrefix=\"ex\" namespace=\"WebApp.Controls\" /></controls></pages></system.web>" +
+                "<location path=\"Admin\"><system.web><pages><controls><add tagPrefix=\"adm\" namespace=\"WebApp.Admin\" /></controls></pages></system.web></location>" +
+                "</configuration>")
+            .WithMarkup("Admin/Reports/Web.config",
+                "<configuration><system.web><pages><controls><add tagPrefix=\"rep\" namespace=\"WebApp.Reports\" /></controls></pages></system.web></configuration>")
+            .WithMarkup("Default.aspx", PageDirective + "<form id=\"form1\" runat=\"server\"><ex:GreetingLabel ID=\"a\" runat=\"server\" /><adm:AdminLabel ID=\"b\" runat=\"server\" /></form>")
+            .WithMarkup("Admin/Reports/Sales.aspx",
+                "<%@ Page Language=\"C#\" CodeBehind=\"Sales.aspx.cs\" Inherits=\"WebApp.Sales\" %>" +
+                "<form id=\"form1\" runat=\"server\"><ex:GreetingLabel ID=\"a\" runat=\"server\" /><adm:AdminLabel ID=\"b\" runat=\"server\" /><rep:ReportLabel ID=\"c\" runat=\"server\" /></form>")
+            .WithSource("Code.cs",
+                "namespace WebApp { public partial class _Default : System.Web.UI.Page { } public partial class Sales : System.Web.UI.Page { } }" +
+                "namespace WebApp.Controls { public class GreetingLabel : System.Web.UI.WebControls.Label { } }" +
+                "namespace WebApp.Admin { public class AdminLabel : System.Web.UI.WebControls.Label { } }" +
+                "namespace WebApp.Reports { public class ReportLabel : System.Web.UI.WebControls.Label { } }")
+            .Run();
+
+        // The root page cannot see the Admin-scoped prefix.
+        var diagnostic = DesignerAssert.HasDiagnostic(result, "SWWF001");
+        Assert.Contains("adm:AdminLabel", diagnostic.GetMessage());
+        Assert.Single(result.GeneratorDiagnostics);
+        var root = result.GetSource(DefaultHint);
+        DesignerAssert.HasField(root, "global::WebApp.Controls.GreetingLabel", "a");
+        DesignerAssert.HasNoField(root, "b");
+
+        var sales = result.GetSource("Admin_Reports_Sales.aspx.designer.g.cs");
+        DesignerAssert.HasField(sales, "global::WebApp.Controls.GreetingLabel", "a");
+        DesignerAssert.HasField(sales, "global::WebApp.Admin.AdminLabel", "b");
+        DesignerAssert.HasField(sales, "global::WebApp.Reports.ReportLabel", "c");
+        DesignerAssert.Compiles(result);
+    }
+
+    [NetFx48Fact]
+    public void Template_instance_attribute_is_inherited_by_overriding_properties()
+    {
+        var result = Page(
+            "<%@ Register TagPrefix=\"my\" Namespace=\"WebApp.Controls\" %>" +
+            "<form id=\"form1\" runat=\"server\">" +
+            "<my:DerivedPanel ID=\"pnl\" runat=\"server\"><Body><asp:Label ID=\"inSingle\" runat=\"server\" /></Body>" +
+            "<Rows><asp:Label ID=\"inMultiple\" runat=\"server\" /></Rows></my:DerivedPanel>" +
+            "</form>",
+            DefaultCodeBehind +
+            "namespace WebApp.Controls { " +
+            "public class BasePanel : System.Web.UI.WebControls.WebControl { " +
+            "  [System.Web.UI.TemplateInstance(System.Web.UI.TemplateInstance.Single)] public virtual System.Web.UI.ITemplate Body { get; set; } " +
+            "  public virtual System.Web.UI.ITemplate Rows { get; set; } } " +
+            "public class DerivedPanel : BasePanel { " +
+            "  public override System.Web.UI.ITemplate Body { get; set; } " +
+            "  public override System.Web.UI.ITemplate Rows { get; set; } } }").Run();
+
+        DesignerAssert.NoDiagnostics(result);
+        var source = result.GetSource(DefaultHint);
+        DesignerAssert.HasField(source, "global::WebApp.Controls.DerivedPanel", "pnl");
+        DesignerAssert.HasField(source, WebControls + "Label", "inSingle");
+        DesignerAssert.HasNoField(source, "inMultiple");
+        DesignerAssert.Compiles(result);
+    }
+
+    [NetFx48Fact]
+    public void Ids_that_are_keywords_are_escaped()
+    {
+        var result = Page("<form id=\"form1\" runat=\"server\"><asp:Label ID=\"class\" runat=\"server\" /><asp:Label ID=\"value\" runat=\"server\" /></form>").Run();
+
+        DesignerAssert.NoDiagnostics(result);
+        var source = result.GetSource(DefaultHint);
+        Assert.Contains("protected global::System.Web.UI.WebControls.Label @class;", source);
+        Assert.Contains("/// class control.", source);
+        DesignerAssert.HasField(source, WebControls + "Label", "value");
+        DesignerAssert.Compiles(result);
+    }
+
+    [NetFx48Fact]
+    public void Nested_code_behind_classes_get_nested_partial_declarations()
+    {
+        var result = new GeneratorTestHost()
+            .WithMarkup("Default.aspx", "<%@ Page Language=\"C#\" CodeBehind=\"Default.aspx.cs\" Inherits=\"WebApp.Pages.Outer.Inner\" %><form id=\"form1\" runat=\"server\"><asp:Label ID=\"lbl\" runat=\"server\" /></form>")
+            .WithSource("Default.aspx.cs", "namespace WebApp.Pages { public partial class Outer { public partial class Inner : System.Web.UI.Page { } } }")
+            .Run();
+
+        DesignerAssert.NoDiagnostics(result);
+        var source = result.GetSource(DefaultHint);
+        Assert.Contains("namespace WebApp.Pages {", source);
+        Assert.Contains("    partial class Outer {", source);
+        Assert.Contains("        partial class Inner {", source);
+        DesignerAssert.HasField(source, WebControls + "Label", "lbl");
+        DesignerAssert.Compiles(result);
+    }
+
+    [NetFx48Fact]
     public void Without_System_Web_nothing_is_generated_and_nothing_is_reported()
     {
         var result = Page("<asp:Label ID=\"a\" runat=\"server\" />", "namespace WebApp { public partial class _Default { } }").Run(referenceSystemWeb: false);
