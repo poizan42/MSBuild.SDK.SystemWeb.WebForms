@@ -25,6 +25,6 @@
   </ItemGroup>
 
   <Target Name="_MSBuildSDKSystemWebWebFormsCheckSdk" BeforeTargets="BeforeBuild;CoreCompile" Condition="'$(UsingMSBuildSDKSystemWeb)'!='true'">
-    <Error Code="SWWF900" Text="MSBuild.SDK.SystemWeb.WebForms must be used together with the MSBuild.SDK.SystemWeb project SDK (&lt;Project Sdk=&quot;MSBuild.SDK.SystemWeb&quot;&gt;)." />
+    <Error Code="SWWF900" Text="KfbSoft.MSBuild.SDK.SystemWeb.WebForms must be used together with the MSBuild.SDK.SystemWeb project SDK (&lt;Project Sdk=&quot;MSBuild.SDK.SystemWeb&quot;&gt;)." />
   </Target>
 </Project>

@@ -12,7 +12,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageId>MSBuild.SDK.SystemWeb.WebForms</PackageId>
+    <PackageId>KfbSoft.MSBuild.SDK.SystemWeb.WebForms</PackageId>
     <Description>Secondary MSBuild SDK for MSBuild.SDK.SystemWeb projects that generates ASP.NET Web Forms designer code (control fields, typed Master/PreviousPage properties) from .aspx/.ascx/.master markup using a Roslyn incremental source generator.</Description>
     <PackageTags>MSBuild;MSBuildSdk;System.Web;WebForms;ASP.NET;SourceGenerator;designer</PackageTags>
     <PackageType>MSBuildSdk</PackageType>

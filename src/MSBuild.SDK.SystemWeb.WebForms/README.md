@@ -1,4 +1,4 @@
-# MSBuild.SDK.SystemWeb.WebForms
+# KfbSoft.MSBuild.SDK.SystemWeb.WebForms
 
 A secondary MSBuild SDK for [MSBuild.SDK.SystemWeb](https://github.com/CZEMacLeod/MSBuild.SDK.SystemWeb) projects that brings back
 ASP.NET Web Forms designer code for SDK-style projects.
@@ -15,21 +15,21 @@ Add it as a secondary SDK to a project that uses `MSBuild.SDK.SystemWeb`:
 
 ```xml
 <Project Sdk="MSBuild.SDK.SystemWeb">
-  <Sdk Name="MSBuild.SDK.SystemWeb.WebForms" />
+  <Sdk Name="KfbSoft.MSBuild.SDK.SystemWeb.WebForms" />
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
   </PropertyGroup>
 </Project>
 ```
 
-MSBuild SDKs obtained from NuGet need a version, either inline (`<Sdk Name="MSBuild.SDK.SystemWeb.WebForms" Version="$version$" />`)
+MSBuild SDKs obtained from NuGet need a version, either inline (`<Sdk Name="KfbSoft.MSBuild.SDK.SystemWeb.WebForms" Version="$version$" />`)
 or in `global.json`:
 
 ```json
 {
   "msbuild-sdks": {
     "MSBuild.SDK.SystemWeb": "4.0.106",
-    "MSBuild.SDK.SystemWeb.WebForms": "$version$"
+    "KfbSoft.MSBuild.SDK.SystemWeb.WebForms": "$version$"
   }
 }
 ```

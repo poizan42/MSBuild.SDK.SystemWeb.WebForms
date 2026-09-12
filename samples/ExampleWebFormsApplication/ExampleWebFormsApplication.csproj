@@ -1,7 +1,7 @@
 <Project Sdk="MSBuild.SDK.SystemWeb">
   <!--
     Development loop for the generator: import the WebForms SDK files straight from the source tree and use the
-    generator project output as the analyzer. A published consumer just adds <Sdk Name="MSBuild.SDK.SystemWeb.WebForms" />.
+    generator project output as the analyzer. A published consumer just adds <Sdk Name="KfbSoft.MSBuild.SDK.SystemWeb.WebForms" />.
   -->
   <Import Project="..\..\src\MSBuild.SDK.SystemWeb.WebForms\Sdk\Sdk.props" />
 

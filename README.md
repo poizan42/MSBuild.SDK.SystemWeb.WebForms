@@ -1,4 +1,4 @@
-# MSBuild.SDK.SystemWeb.WebForms
+# KfbSoft.MSBuild.SDK.SystemWeb.WebForms
 
 A secondary MSBuild SDK for [MSBuild.SDK.SystemWeb](https://github.com/CZEMacLeod/MSBuild.SDK.SystemWeb) projects that generates
 ASP.NET Web Forms designer code (`*.designer.cs` equivalents) with a Roslyn incremental source generator.
@@ -10,7 +10,7 @@ Visual Studio, Rider and command-line builds alike.
 
 ```xml
 <Project Sdk="MSBuild.SDK.SystemWeb">
-  <Sdk Name="MSBuild.SDK.SystemWeb.WebForms" />
+  <Sdk Name="KfbSoft.MSBuild.SDK.SystemWeb.WebForms" />
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
   </PropertyGroup>
@@ -56,7 +56,7 @@ msbuild -restore samples/ExampleWebFormsApplication/ExampleWebFormsApplication.c
 The generated designer code is written to `samples/ExampleWebFormsApplication/obj/GeneratedFiles`.
 
 Building the generator project also produces the SDK package in `packages/`. To try the packaged SDK, point a `nuget.config` at that folder
-and reference `<Sdk Name="MSBuild.SDK.SystemWeb.WebForms" Version="..." />` from a project; the NuGet SDK resolver caches SDK packages in
+and reference `<Sdk Name="KfbSoft.MSBuild.SDK.SystemWeb.WebForms" Version="..." />` from a project; the NuGet SDK resolver caches SDK packages in
 `%USERPROFILE%\.nuget\packages`, so bump the version (or delete the cached folder) when iterating.
 
 Note for generator development: Visual Studio does not reload a rebuilt generator assembly until it is restarted; command-line builds

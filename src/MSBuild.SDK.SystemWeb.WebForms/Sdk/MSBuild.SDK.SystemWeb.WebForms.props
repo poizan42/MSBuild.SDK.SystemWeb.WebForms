@@ -1,6 +1,6 @@
 <Project>
   <!--
-    MSBuild.SDK.SystemWeb.WebForms
+    KfbSoft.MSBuild.SDK.SystemWeb.WebForms
     Secondary SDK for MSBuild.SDK.SystemWeb projects. Adds a Roslyn incremental source generator that produces
     the ASP.NET Web Forms designer code (control fields, typed Master/PreviousPage properties) for
     .aspx / .ascx / .master files, replacing the *.designer.cs files that Visual Studio only maintains
@@ -8,7 +8,7 @@
 
     Usage:
       <Project Sdk="MSBuild.SDK.SystemWeb">
-        <Sdk Name="MSBuild.SDK.SystemWeb.WebForms" />
+        <Sdk Name="KfbSoft.MSBuild.SDK.SystemWeb.WebForms" />
         ...
       </Project>
   -->
