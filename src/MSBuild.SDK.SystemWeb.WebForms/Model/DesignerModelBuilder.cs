@@ -231,7 +231,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
                     }
                     else if (!_resolver.IsContent(resolved.Value.Symbol))
                     {
-                        AddField(element, resolved.Value.TypeText);
+                        AddField(element, resolved.Value.TypeText, resolved.Value.Symbol);
                     }
                 }
 
@@ -251,7 +251,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
                 var symbol = _resolver.GetTypeByMetadataName(metadataName);
                 if (element.Id is not null)
                 {
-                    AddField(element, symbol is not null ? Display(symbol) : GlobalPrefix + metadataName);
+                    AddField(element, symbol is not null ? Display(symbol) : GlobalPrefix + metadataName, symbol);
                 }
 
                 var isServerHead = element.RunAtServer && string.Equals(element.LocalName, "head", StringComparison.OrdinalIgnoreCase);
@@ -419,7 +419,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
             return new TypedProperty(propertyName, masterSymbol is not null ? Display(masterSymbol) : QualifyFallback(summary.Inherits));
         }
 
-        private void AddField(MarkupElement element, string typeText)
+        private void AddField(MarkupElement element, string typeText, INamedTypeSymbol? controlType)
         {
             var id = element.Id!;
             if (!IdentifierRules.IsValidIdentifier(id))
@@ -433,7 +433,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
                 return;
             }
 
-            if (_classSymbol is not null && TypeResolver.HasMember(_classSymbol, id))
+            if (_classSymbol is not null && TypeResolver.HasBindableMember(_classSymbol, id, controlType))
             {
                 // Declared in the code-behind (or a legacy .designer.cs, or a base class): the developer owns it.
                 return;

@@ -204,17 +204,27 @@ public class DesignerGeneratorTests
     public void Members_already_declared_in_code_behind_or_base_classes_are_skipped()
     {
         var result = Page(
+            "<html><head runat=\"server\" id=\"Header\"></head><body>" +
             "<form id=\"form1\" runat=\"server\"><asp:Label ID=\"lblName\" runat=\"server\" /><asp:TextBox ID=\"txtBase\" runat=\"server\" />" +
-            "<asp:Label ID=\"lblPrivateInBase\" runat=\"server\" /><asp:Label ID=\"lblGenerated\" runat=\"server\" /></form>",
+            "<asp:Label ID=\"lblPrivateInBase\" runat=\"server\" /><asp:Label ID=\"lblGenerated\" runat=\"server\" />" +
+            "<asp:Label ID=\"lblBaseProperty\" runat=\"server\" /><asp:Label ID=\"lblBaseReadOnly\" runat=\"server\" /><asp:Label ID=\"Error\" runat=\"server\" />" +
+            "</form></body></html>",
             "namespace WebApp { " +
-            "public class BasePage : System.Web.UI.Page { protected System.Web.UI.WebControls.TextBox txtBase; private System.Web.UI.WebControls.Label lblPrivateInBase; } " +
+            "public class BasePage : System.Web.UI.Page { protected System.Web.UI.WebControls.TextBox txtBase; private System.Web.UI.WebControls.Label lblPrivateInBase; " +
+            "  protected System.Web.UI.WebControls.WebControl lblBaseProperty { get; set; } protected System.Web.UI.WebControls.Label lblBaseReadOnly => null; } " +
             "public partial class _Default : BasePage { protected System.Web.UI.WebControls.Label lblName; } }").Run();
 
         DesignerAssert.NoDiagnostics(result);
         var source = result.GetSource(DefaultHint);
+        // Declared in the class itself, or a base field / settable compatible property: ASP.NET binds to those, so no field.
         DesignerAssert.HasNoField(source, "lblName");
         DesignerAssert.HasNoField(source, "txtBase");
+        DesignerAssert.HasNoField(source, "lblBaseProperty");
+        // Private base fields, getter-only properties (like Page.Header) and events (Error) get a hiding field, as in Visual Studio.
         DesignerAssert.HasField(source, WebControls + "Label", "lblPrivateInBase");
+        DesignerAssert.HasField(source, WebControls + "Label", "lblBaseReadOnly");
+        DesignerAssert.HasField(source, HtmlControls + "HtmlHead", "Header");
+        DesignerAssert.HasField(source, WebControls + "Label", "Error");
         DesignerAssert.HasField(source, WebControls + "Label", "lblGenerated");
         DesignerAssert.Compiles(result);
     }

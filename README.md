@@ -32,7 +32,7 @@ the generated designers matched Visual Studio's checked-in `*.designer.cs` files
 | `tests/MSBuild.SDK.SystemWeb.WebForms.Tests` | xunit tests. Parser tests are self-contained; generator tests run the generator over an in-memory project compiled against the .NET Framework 4.8 reference assemblies and check that the generated code compiles against the real `System.Web`. |
 | `samples/ExampleWebFormsApplication` | A Web Forms application (master page, content page, user control, Web.config registrations, templates) with no designer files. It imports the SDK files from the source tree and uses the generator project as an analyzer, so it always exercises the current code. |
 | `samples/ExampleWebFormsApplicationVB` | The VB counterpart: master page, content page with `Handles` clauses on generated `WithEvents` fields. |
-| `tools/DesignerCompare` | Runs the generator over an existing C# Web Forms project and compares the result, field by field, with the `*.designer.cs` files Visual Studio maintained. See below. |
+| `tools/DesignerCompare` | Runs the generator over an existing C# or VB Web Forms project and compares the result, field by field, with the `*.designer.cs` / `*.designer.vb` files Visual Studio maintained. See below. |
 
 ## How it works
 
@@ -79,4 +79,7 @@ dotnet run --project tools/DesignerCompare -- "C:\path\to\WebApplication" --out 
 
 The project's own designer files are excluded from the compilation so the generator produces complete designers; their content is the
 expected result. Web Sites have no designer files, so for them the tool only reports diagnostics and pages without output.
-Options: `--root-namespace`, `--exclude-ref <name>` (repeatable), `--refs <reference assemblies dir>`, `--show-all`.
+The language is taken from the project file (`.csproj` / `.vbproj`; for VB the `RootNamespace`, `OptionStrict` and project-level
+`Import`s are honoured), or from the majority of source files for a Web Site.
+Options: `--language cs|vb`, `--root-namespace`, `--exclude-ref <name>` (repeatable), `--exclude-dir <name>` (repeatable, e.g. a `backup`
+folder that duplicates the project), `--refs <reference assemblies dir>`, `--show-all`.

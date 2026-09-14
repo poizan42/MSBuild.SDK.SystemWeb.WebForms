@@ -113,7 +113,7 @@ public class VisualBasicGeneratorTests
     {
         var result = new GeneratorTestHost()
             .WithLanguage(LanguageNames.VisualBasic)
-            // "Error" would be skipped (Page already has an Error event, as in VS); Date and Loop are keywords with no such clash.
+            // Error is both a keyword and an inherited Page event; like VS, a field is generated and it hides the event.
             .WithMarkup("Default.aspx", "<%@ Page Language=\"VB\" CodeBehind=\"Default.aspx.vb\" Inherits=\"WebApp.Outer.Inner\" %><asp:Label ID=\"Date\" runat=\"server\" /><asp:Label ID=\"Loop\" runat=\"server\" /><asp:Label ID=\"Error\" runat=\"server\" />")
             .WithSource("Default.aspx.vb", "Public Class Outer\r\n    Public Class Inner\r\n        Inherits System.Web.UI.Page\r\n    End Class\r\nEnd Class\r\n")
             .Run();
@@ -124,7 +124,7 @@ public class VisualBasicGeneratorTests
         Assert.Contains("    Partial Class Inner\r\n", source);
         Assert.Contains("Protected WithEvents [Date] As " + WebControls + "Label", source);
         Assert.Contains("Protected WithEvents [Loop] As " + WebControls + "Label", source);
-        DesignerAssert.HasNoVbField(source, "Error");
+        Assert.Contains("Protected WithEvents [Error] As " + WebControls + "Label", source);
         DesignerAssert.Compiles(result);
     }
 }

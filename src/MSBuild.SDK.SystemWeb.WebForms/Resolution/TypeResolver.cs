@@ -167,8 +167,14 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Resolution
             return null;
         }
 
-        /// <summary>True when the class or a base class already declares a non-private member with this name.</summary>
-        public static bool HasMember(INamedTypeSymbol type, string name)
+        /// <summary>
+        /// True when a designer field must not be generated because the control already has a home:
+        /// any member of that name declared on the class itself (a second declaration would not compile), or a
+        /// non-private field or settable property of a compatible type on a base class (ASP.NET assigns the control to it).
+        /// Other base members, such as the getter-only <c>Page.Header</c> or the <c>Error</c> event, are simply hidden by
+        /// the new field, which is what Visual Studio does too.
+        /// </summary>
+        public static bool HasBindableMember(INamedTypeSymbol type, string name, ITypeSymbol? controlType)
         {
             if (type.GetMembers(name).Length > 0)
             {
@@ -179,10 +185,41 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Resolution
             {
                 foreach (var member in current.GetMembers(name))
                 {
-                    if (member.DeclaredAccessibility != Accessibility.Private)
+                    if (member.DeclaredAccessibility == Accessibility.Private)
                     {
-                        return true;
+                        continue;
                     }
+
+                    switch (member)
+                    {
+                        case IFieldSymbol:
+                            return true;
+                        case IPropertySymbol { SetMethod: not null } property when IsAssignable(controlType, property.Type):
+                            return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsAssignable(ITypeSymbol? controlType, ITypeSymbol target)
+        {
+            if (controlType is null || target.SpecialType == SpecialType.System_Object)
+            {
+                return true;
+            }
+
+            if (target is INamedTypeSymbol named && DerivesFrom(controlType, named))
+            {
+                return true;
+            }
+
+            foreach (var iface in controlType.AllInterfaces)
+            {
+                if (SymbolEqualityComparer.Default.Equals(iface, target))
+                {
+                    return true;
                 }
             }
 

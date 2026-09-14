@@ -1,7 +1,9 @@
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.VisualBasic;
 using MSBuild.SDK.SystemWeb.WebForms.Generator;
 
 namespace DesignerCompare;
@@ -22,7 +24,7 @@ public static class Program
     {
         if (args.Length == 0 || args[0] is "-h" or "--help")
         {
-            Console.WriteLine("Usage: DesignerCompare <projectDir> [--out report.md] [--root-namespace Ns] [--exclude-ref Name]* [--refs <.NET Framework reference assemblies dir>] [--show-all]");
+            Console.WriteLine("Usage: DesignerCompare <projectDir> [--out report.md] [--language cs|vb] [--root-namespace Ns] [--exclude-ref Name]* [--exclude-dir Name]* [--refs <.NET Framework reference assemblies dir>] [--show-all]");
             return 2;
         }
 
@@ -30,8 +32,10 @@ public static class Program
         string? outFile = null;
         string? rootNamespace = null;
         string? refsDir = null;
+        string? language = null;
         var showAll = false;
         var excludedRefs = new List<string>();
+        var excludedDirs = new List<string>();
         for (var i = 1; i < args.Length; i++)
         {
             switch (args[i])
@@ -39,8 +43,15 @@ public static class Program
                 case "--out": outFile = args[++i]; break;
                 case "--root-namespace": rootNamespace = args[++i]; break;
                 case "--exclude-ref": excludedRefs.Add(args[++i]); break;
+                case "--exclude-dir": excludedDirs.Add(args[++i]); break;
                 case "--refs": refsDir = args[++i]; break;
                 case "--show-all": showAll = true; break;
+                case "--language":
+                    var value = args[++i];
+                    language = value.Equals("vb", StringComparison.OrdinalIgnoreCase) ? LanguageNames.VisualBasic
+                        : value.Equals("cs", StringComparison.OrdinalIgnoreCase) ? LanguageNames.CSharp
+                        : throw new ArgumentException($"Unknown language '{value}' (use cs or vb).");
+                    break;
                 default:
                     Console.Error.WriteLine($"Unknown argument '{args[i]}'.");
                     return 2;
@@ -54,17 +65,17 @@ public static class Program
         }
 
         var stopwatch = Stopwatch.StartNew();
-        var project = ProjectModel.Discover(projectDir, rootNamespace, excludedRefs);
+        var project = ProjectModel.Discover(projectDir, rootNamespace, excludedRefs, language, excludedDirs);
         var frameworkReferences = FrameworkReferences.Load(refsDir);
         var compilation = project.CreateCompilation(frameworkReferences);
         var discoveryMs = stopwatch.ElapsedMilliseconds;
 
         stopwatch.Restart();
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(
-            new[] { new WebFormsDesignerGenerator().AsSourceGenerator() },
-            project.CreateAdditionalTexts(),
-            new CSharpParseOptions(LanguageVersion.Latest),
-            project.CreateOptionsProvider());
+        var generators = ImmutableArray.Create(new WebFormsDesignerGenerator().AsSourceGenerator());
+        var additionalTexts = project.CreateAdditionalTexts().ToImmutableArray();
+        GeneratorDriver driver = project.Language == LanguageNames.VisualBasic
+            ? VisualBasicGeneratorDriver.Create(generators, additionalTexts, new VisualBasicParseOptions(Microsoft.CodeAnalysis.VisualBasic.LanguageVersion.Latest), project.CreateOptionsProvider())
+            : CSharpGeneratorDriver.Create(generators, additionalTexts, new CSharpParseOptions(Microsoft.CodeAnalysis.CSharp.LanguageVersion.Latest), project.CreateOptionsProvider());
         driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var generatorDiagnostics);
         var runResult = driver.GetRunResult().Results.Single();
         var generateMs = stopwatch.ElapsedMilliseconds;
@@ -79,7 +90,7 @@ public static class Program
         foreach (var markup in project.MarkupFiles.OrderBy(m => m, StringComparer.OrdinalIgnoreCase))
         {
             var relative = project.GetRelativePath(markup);
-            var hint = HintNames.ForMarkup(relative);
+            var hint = HintNames.ForMarkup(relative, project.Language);
             generatedByHint.TryGetValue(hint, out var generatedSource);
             var legacyFile = project.GetLegacyDesignerFile(markup);
             var legacySource = legacyFile is null ? null : File.ReadAllText(legacyFile);

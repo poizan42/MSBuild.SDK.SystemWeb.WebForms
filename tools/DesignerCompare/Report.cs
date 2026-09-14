@@ -26,12 +26,12 @@ public sealed class Report
         var page = new PageResult(relativePath, diagnostics);
         if (generatedSource is not null)
         {
-            page.Generated = DesignerMembers.Parse(generatedSource);
+            page.Generated = DesignerMembers.Parse(generatedSource, _project.Language);
         }
 
         if (legacySource is not null)
         {
-            page.Legacy = DesignerMembers.Parse(legacySource);
+            page.Legacy = DesignerMembers.Parse(legacySource, _project.Language);
         }
 
         if (page.Generated is not null && page.Legacy is not null)
