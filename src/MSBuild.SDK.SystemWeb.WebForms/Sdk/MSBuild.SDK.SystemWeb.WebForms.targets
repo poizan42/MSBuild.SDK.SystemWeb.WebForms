@@ -1,8 +1,8 @@
 <Project>
   <PropertyGroup>
-    <!-- Only C# projects are supported by the generator for now. $(Language) is not set yet at this point, so gate on the extension. -->
+    <!-- C# and VB projects. $(Language) is not set yet at this point, so gate on the project extension. -->
     <_WebFormsGeneratorEnabled>false</_WebFormsGeneratorEnabled>
-    <_WebFormsGeneratorEnabled Condition="'$(EnableWebFormsDesignerGenerator)'=='true' AND '$(MSBuildProjectExtension)'=='.csproj'">true</_WebFormsGeneratorEnabled>
+    <_WebFormsGeneratorEnabled Condition="'$(EnableWebFormsDesignerGenerator)'=='true' AND ('$(MSBuildProjectExtension)'=='.csproj' OR '$(MSBuildProjectExtension)'=='.vbproj')">true</_WebFormsGeneratorEnabled>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(_WebFormsGeneratorEnabled)'=='true'">

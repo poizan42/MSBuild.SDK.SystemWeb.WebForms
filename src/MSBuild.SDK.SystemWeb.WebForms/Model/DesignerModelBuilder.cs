@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
+using MSBuild.SDK.SystemWeb.WebForms.Generator.Emit;
 using MSBuild.SDK.SystemWeb.WebForms.Generator.Parsing;
 using MSBuild.SDK.SystemWeb.WebForms.Generator.Registry;
 using MSBuild.SDK.SystemWeb.WebForms.Generator.Resolution;
@@ -28,7 +28,8 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
         private readonly List<DiagnosticInfo> _diagnostics = new();
         private readonly HashSet<ISymbol> _dependencies = new(SymbolEqualityComparer.Default);
         private readonly List<DesignerField> _fields = new();
-        private readonly HashSet<string> _fieldNames = new(StringComparer.Ordinal);
+        private readonly HashSet<string> _fieldNames;
+        private readonly string _language;
         private INamedTypeSymbol? _classSymbol;
         private bool _cacheable = true;
 
@@ -45,7 +46,13 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
             _options = options;
             _resolver = resolver;
             _registry = TagRegistry.Create(document, webConfig, AssemblyTagPrefixIndex.Get(compilation));
+            _language = compilation.Language;
+            // VB identifiers are case-insensitive, so IDs differing only in case would collide.
+            _fieldNames = new HashSet<string>(_language == LanguageNames.VisualBasic ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
         }
+
+        /// <summary>The fully-qualified-name prefix of the compilation's language (<c>global::</c> or <c>Global.</c>); symbol display strings already use it.</summary>
+        private string GlobalPrefix => _language == LanguageNames.VisualBasic ? "Global." : "global::";
 
         public static BuildResult Build(
             MarkupDocument document,
@@ -244,7 +251,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
                 var symbol = _resolver.GetTypeByMetadataName(metadataName);
                 if (element.Id is not null)
                 {
-                    AddField(element, symbol is not null ? Display(symbol) : "global::" + metadataName);
+                    AddField(element, symbol is not null ? Display(symbol) : GlobalPrefix + metadataName);
                 }
 
                 var isServerHead = element.RunAtServer && string.Equals(element.LocalName, "head", StringComparison.OrdinalIgnoreCase);
@@ -352,7 +359,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
         {
             const string UserControl = "System.Web.UI.UserControl";
             var symbol = _resolver.GetTypeByMetadataName(UserControl);
-            return (symbol, symbol is not null ? Display(symbol) : "global::" + UserControl);
+            return (symbol, symbol is not null ? Display(symbol) : GlobalPrefix + UserControl);
         }
 
         private TypedProperty? BuildTypedProperty(string directiveName, string propertyName)
@@ -415,7 +422,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
         private void AddField(MarkupElement element, string typeText)
         {
             var id = element.Id!;
-            if (!SyntaxFacts.IsValidIdentifier(id))
+            if (!IdentifierRules.IsValidIdentifier(id))
             {
                 Report(Diagnostics.ParseProblem, element.Position, null, _document.RelativePath, $"'{id}' is not a valid C# identifier; no designer field is generated for it.");
                 return;
@@ -439,10 +446,10 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
         {
             if (_options.RootNamespace is not null && typeName.IndexOf('.') < 0)
             {
-                return "global::" + _options.RootNamespace + "." + typeName;
+                return GlobalPrefix + _options.RootNamespace + "." + typeName;
             }
 
-            return "global::" + typeName;
+            return GlobalPrefix + typeName;
         }
 
         private static string Display(INamedTypeSymbol symbol) => symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);

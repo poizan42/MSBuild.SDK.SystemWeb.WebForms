@@ -13,7 +13,7 @@ public static class NetFx48ReferenceAssemblies
     private static readonly string[] AssemblyNames =
     {
         "mscorlib", "System", "System.Core", "System.Xml", "System.Configuration", "System.Drawing", "System.Data",
-        "System.Web", "System.Web.Extensions",
+        "System.Web", "System.Web.Extensions", "Microsoft.VisualBasic",
     };
 
     private static readonly Lazy<ImmutableArray<MetadataReference>> LazyReferences = new(Load);

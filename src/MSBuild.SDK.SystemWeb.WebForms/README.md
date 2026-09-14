@@ -53,6 +53,9 @@ For every `.aspx`, `.ascx` and `.master` file that has an `Inherits` attribute, 
 - A member that the code-behind (or a base class, or a legacy `.designer.cs`) already declares is skipped, so you can take control of a
   field by moving its declaration into the code-behind, as before.
 - `<%@ MasterType %>` and `<%@ PreviousPageType %>` produce `public new T Master` / `PreviousPage` properties.
+- VB projects get the VB shape Visual Studio produces: `Protected WithEvents` fields (so `Handles` clauses work), a
+  `Public Shadows ReadOnly Property Master()`, `Option Strict On`, and a `Namespace` block relative to the project's root
+  namespace, exactly as the code-behind declares it.
 
 Generated files show up in Visual Studio under *Dependencies > Analyzers > MSBuild.SDK.SystemWeb.WebForms.Generator*. To also write
 them to disk, set `EmitCompilerGeneratedFiles=true` in the project.
@@ -80,7 +83,6 @@ If you turned those off, add your markup files as `AdditionalFiles` yourself.
 
 ## Known limitations
 
-- C# projects only for now (`.csproj`). The parser and model are language neutral; a VB emitter is a possible follow-up.
 - Server-side includes (`<!-- #include -->`) are not followed.
 - Controls whose markup is interpreted by a custom `ControlBuilder` may be mapped differently from the runtime.
 - `App_Code` is not part of the compilation in SDK-style projects, so controls declared there cannot be resolved.

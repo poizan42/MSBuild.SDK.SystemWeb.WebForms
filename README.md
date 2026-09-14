@@ -21,7 +21,8 @@ See the [package README](src/MSBuild.SDK.SystemWeb.WebForms/README.md) for usage
 
 ## Status
 
-Prototype. C# projects only; the parser and model are language neutral, a VB emitter is a possible follow-up.
+Prototype. C# and VB projects are supported. Validated against several hundred pages of existing Web Application Projects:
+the generated designers matched Visual Studio's checked-in `*.designer.cs` files wherever those were up to date.
 
 ## Repository layout
 
@@ -30,7 +31,8 @@ Prototype. C# projects only; the parser and model are language neutral, a VB emi
 | `src/MSBuild.SDK.SystemWeb.WebForms` | The generator (`netstandard2.0`, Roslyn 4.8) and the SDK package. `Sdk/` holds the props/targets that register the generator as an analyzer and hand the markup files to the compiler; the built DLL is packed to `analyzers/dotnet/cs`. |
 | `tests/MSBuild.SDK.SystemWeb.WebForms.Tests` | xunit tests. Parser tests are self-contained; generator tests run the generator over an in-memory project compiled against the .NET Framework 4.8 reference assemblies and check that the generated code compiles against the real `System.Web`. |
 | `samples/ExampleWebFormsApplication` | A Web Forms application (master page, content page, user control, Web.config registrations, templates) with no designer files. It imports the SDK files from the source tree and uses the generator project as an analyzer, so it always exercises the current code. |
-| `tools/DesignerCompare` | Runs the generator over an existing Web Forms project and compares the result, field by field, with the `*.designer.cs` files Visual Studio maintained. See below. |
+| `samples/ExampleWebFormsApplicationVB` | The VB counterpart: master page, content page with `Handles` clauses on generated `WithEvents` fields. |
+| `tools/DesignerCompare` | Runs the generator over an existing C# Web Forms project and compares the result, field by field, with the `*.designer.cs` files Visual Studio maintained. See below. |
 
 ## How it works
 

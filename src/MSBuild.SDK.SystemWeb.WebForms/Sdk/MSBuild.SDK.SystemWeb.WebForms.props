@@ -16,6 +16,6 @@
     <!-- Set to false to keep the SDK imported but not run the designer generator. -->
     <EnableWebFormsDesignerGenerator Condition="'$(EnableWebFormsDesignerGenerator)'==''">true</EnableWebFormsDesignerGenerator>
     <!-- Location of the generator assembly. Overridable for local development of the generator itself. -->
-    <MSBuildSDKSystemWebWebFormsGeneratorPath Condition="'$(MSBuildSDKSystemWebWebFormsGeneratorPath)'==''">$(MSBuildThisFileDirectory)..\analyzers\dotnet\cs\MSBuild.SDK.SystemWeb.WebForms.Generator.dll</MSBuildSDKSystemWebWebFormsGeneratorPath>
+    <MSBuildSDKSystemWebWebFormsGeneratorPath Condition="'$(MSBuildSDKSystemWebWebFormsGeneratorPath)'==''">$(MSBuildThisFileDirectory)..\analyzers\dotnet\MSBuild.SDK.SystemWeb.WebForms.Generator.dll</MSBuildSDKSystemWebWebFormsGeneratorPath>
   </PropertyGroup>
 </Project>

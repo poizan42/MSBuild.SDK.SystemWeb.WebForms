@@ -25,8 +25,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- 4.8.0 keeps the generator loadable in Visual Studio 2022 17.8+ and in the Microsoft.Net.Compilers.Toolset 5.0.0 compiler used by MSBuild.SDK.SystemWeb. -->
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all" />
+    <!--
+      Only the language-neutral Microsoft.CodeAnalysis is referenced so the same assembly loads in csc, vbc and the IDE for both languages.
+      4.8.0 keeps the generator loadable in Visual Studio 2022 17.8+ and in the Microsoft.Net.Compilers.Toolset 5.0.0 compiler used by MSBuild.SDK.SystemWeb.
+    -->
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.8.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" PrivateAssets="all" />
     <PackageReference Include="PolySharp" Version="1.15.0" PrivateAssets="all" />
   </ItemGroup>
@@ -40,7 +43,7 @@
     <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
     <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
     <!-- The generator assembly is shipped inside the SDK package and registered by Sdk\MSBuild.SDK.SystemWeb.WebForms.targets. -->
-    <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers\dotnet\cs\" Visible="false" />
+    <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers\dotnet\" Visible="false" />
   </ItemGroup>
 
 </Project>

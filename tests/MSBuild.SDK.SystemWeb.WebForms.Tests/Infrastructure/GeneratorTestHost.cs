@@ -2,11 +2,12 @@ using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.VisualBasic;
 using MSBuild.SDK.SystemWeb.WebForms.Generator;
 
 namespace MSBuild.SDK.SystemWeb.WebForms.Tests.Infrastructure;
 
-/// <summary>Builds a fake Web Forms project in memory and runs the generator over it.</summary>
+/// <summary>Builds a fake Web Forms project in memory (C# by default, or VB) and runs the generator over it.</summary>
 public sealed class GeneratorTestHost
 {
     public static readonly string ProjectDir = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"C:\fake\WebApp\" : "/fake/WebApp/";
@@ -14,6 +15,13 @@ public sealed class GeneratorTestHost
     private readonly List<AdditionalText> _additionalTexts = new();
     private readonly List<SyntaxTree> _syntaxTrees = new();
     private string _rootNamespace = "WebApp";
+    private string _language = LanguageNames.CSharp;
+
+    public GeneratorTestHost WithLanguage(string language)
+    {
+        _language = language;
+        return this;
+    }
 
     public GeneratorTestHost WithRootNamespace(string rootNamespace)
     {
@@ -37,7 +45,10 @@ public sealed class GeneratorTestHost
 
     public GeneratorTestHost WithSource(string relativePath, string code)
     {
-        _syntaxTrees.Add(CSharpSyntaxTree.ParseText(code, new CSharpParseOptions(LanguageVersion.Latest), path: ToFullPath(relativePath)));
+        var path = ToFullPath(relativePath);
+        _syntaxTrees.Add(_language == LanguageNames.VisualBasic
+            ? VisualBasicSyntaxTree.ParseText(code, new VisualBasicParseOptions(Microsoft.CodeAnalysis.VisualBasic.LanguageVersion.Latest), path: path)
+            : CSharpSyntaxTree.ParseText(code, new CSharpParseOptions(Microsoft.CodeAnalysis.CSharp.LanguageVersion.Latest), path: path));
         return this;
     }
 
@@ -53,24 +64,38 @@ public sealed class GeneratorTestHost
             ? NetFx48ReferenceAssemblies.References
             : NetFx48ReferenceAssemblies.References.Where(r => !(r.Display ?? string.Empty).Contains("System.Web", StringComparison.OrdinalIgnoreCase)).ToImmutableArray();
 
-        var compilation = CSharpCompilation.Create(
-            "WebApp",
-            _syntaxTrees,
-            references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-
         var optionsProvider = new TestAnalyzerConfigOptionsProvider(new Dictionary<string, string>
         {
             ["build_property.MSBuildProjectDirectory"] = ProjectDir.TrimEnd('\\', '/'),
             ["build_property.RootNamespace"] = _rootNamespace,
         });
 
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(
-            new[] { new WebFormsDesignerGenerator().AsSourceGenerator() },
-            _additionalTexts,
-            new CSharpParseOptions(LanguageVersion.Latest),
-            optionsProvider,
-            new GeneratorDriverOptions(IncrementalGeneratorOutputKind.None, trackIncrementalGeneratorSteps: true));
+        var generators = ImmutableArray.Create(new WebFormsDesignerGenerator().AsSourceGenerator());
+        var additionalTexts = _additionalTexts.ToImmutableArray();
+        var driverOptions = new GeneratorDriverOptions(IncrementalGeneratorOutputKind.None, trackIncrementalGeneratorSteps: true);
+
+        Compilation compilation;
+        GeneratorDriver driver;
+        if (_language == LanguageNames.VisualBasic)
+        {
+            compilation = VisualBasicCompilation.Create(
+                "WebApp",
+                _syntaxTrees,
+                references,
+                new VisualBasicCompilationOptions(OutputKind.DynamicallyLinkedLibrary, rootNamespace: _rootNamespace, optionStrict: OptionStrict.On)
+                    // A VB project's default project-level Imports.
+                    .WithGlobalImports(GlobalImport.Parse("System", "System.Collections.Generic", "System.Web", "System.Web.UI", "System.Web.UI.WebControls")));
+            driver = VisualBasicGeneratorDriver.Create(generators, additionalTexts, new VisualBasicParseOptions(Microsoft.CodeAnalysis.VisualBasic.LanguageVersion.Latest), optionsProvider, driverOptions);
+        }
+        else
+        {
+            compilation = CSharpCompilation.Create(
+                "WebApp",
+                _syntaxTrees,
+                references,
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            driver = CSharpGeneratorDriver.Create(generators, additionalTexts, new CSharpParseOptions(Microsoft.CodeAnalysis.CSharp.LanguageVersion.Latest), optionsProvider, driverOptions);
+        }
 
         return GeneratorTestResult.Run(driver, compilation);
     }
@@ -150,6 +175,17 @@ public static class DesignerAssert
     public static void HasNoField(string source, string name)
     {
         Assert.False(source.Contains($" {name};", StringComparison.Ordinal), $"Did not expect a field named '{name}' in:\n{source}");
+    }
+
+    public static void HasVbField(string source, string fullyQualifiedType, string name)
+    {
+        var declaration = $"Protected WithEvents {name} As {fullyQualifiedType}";
+        Assert.True(source.Contains(declaration, StringComparison.Ordinal), $"Expected '{declaration}' in:\n{source}");
+    }
+
+    public static void HasNoVbField(string source, string name)
+    {
+        Assert.False(source.Contains($"WithEvents {name} As", StringComparison.OrdinalIgnoreCase), $"Did not expect a field named '{name}' in:\n{source}");
     }
 
     public static void Compiles(GeneratorTestResult result)

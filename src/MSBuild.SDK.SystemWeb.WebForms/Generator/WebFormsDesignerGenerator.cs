@@ -10,7 +10,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator
     /// Generates the ASP.NET Web Forms designer code (<c>*.designer.cs</c> equivalent) for every
     /// <c>.aspx</c>, <c>.ascx</c> and <c>.master</c> file passed to the compiler as an AdditionalFile.
     /// </summary>
-    [Generator(LanguageNames.CSharp)]
+    [Generator(LanguageNames.CSharp, LanguageNames.VisualBasic)]
     public sealed class WebFormsDesignerGenerator : IIncrementalGenerator
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)

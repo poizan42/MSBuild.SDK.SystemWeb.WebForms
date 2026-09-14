@@ -1,0 +1,21 @@
+<%@ Master Language="VB" AutoEventWireup="false" CodeBehind="Site.Master.vb" Inherits="ExampleWebFormsApplicationVB.SiteMaster" %>
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server" id="Head1">
+    <title>Example Web Forms Application (VB)</title>
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+</head>
+<body>
+    <form id="form1" runat="server">
+        <asp:ScriptManager ID="scriptManager" runat="server" />
+        <header>
+            <h1><asp:Label ID="lblHeading" runat="server" Text="Example Web Forms Application (VB)" /></h1>
+        </header>
+        <main>
+            <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+        </main>
+    </form>
+</body>
+</html>

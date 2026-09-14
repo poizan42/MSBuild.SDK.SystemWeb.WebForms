@@ -1,10 +1,10 @@
 using System.Text;
-using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis;
 using MSBuild.SDK.SystemWeb.WebForms.Generator.Model;
 
 namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Emit
 {
-    /// <summary>Writes a designer file in the same shape Visual Studio produces for Web Application Projects.</summary>
+    /// <summary>Writes a designer file in the same shape Visual Studio produces for C# Web Application Projects.</summary>
     public static class CSharpDesignerEmitter
     {
         private const string NewLine = "\r\n";
@@ -72,11 +72,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Emit
             return sb.ToString();
         }
 
-        /// <summary>Prefixes reserved keywords with <c>@</c> so an <c>ID="class"</c> still yields a legal field.</summary>
-        private static string Escape(string identifier)
-        {
-            return SyntaxFacts.GetKeywordKind(identifier) != SyntaxKind.None ? "@" + identifier : identifier;
-        }
+        private static string Escape(string identifier) => IdentifierRules.Escape(identifier, LanguageNames.CSharp);
 
         private static void AppendTypedProperty(StringBuilder sb, string indent, TypedProperty? property)
         {

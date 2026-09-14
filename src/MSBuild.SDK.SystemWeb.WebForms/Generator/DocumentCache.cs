@@ -62,10 +62,13 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator
             SourceText? source = null;
             if (result.Model is not null)
             {
-                source = SourceText.From(CSharpDesignerEmitter.Emit(result.Model, document.RelativePath), Encoding.UTF8);
+                var text = compilation.Language == LanguageNames.VisualBasic
+                    ? VisualBasicDesignerEmitter.Emit(result.Model, document.RelativePath, options.RootNamespace)
+                    : CSharpDesignerEmitter.Emit(result.Model, document.RelativePath);
+                source = SourceText.From(text, Encoding.UTF8);
             }
 
-            var output = new DocumentOutput(HintNames.ForMarkup(document.RelativePath), source, result.Diagnostics);
+            var output = new DocumentOutput(HintNames.ForMarkup(document.RelativePath, compilation.Language), source, result.Diagnostics);
             if (result.IsCacheable)
             {
                 Entries[key] = new Entry(document, index, webConfig, options, references, result.DependentTrees, output);

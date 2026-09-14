@@ -1,0 +1,33 @@
+<Project Sdk="MSBuild.SDK.SystemWeb">
+  <!--
+    VB counterpart of ExampleWebFormsApplication. Same development-loop wiring: the WebForms SDK files are imported from
+    the source tree and the generator project output is used as the analyzer.
+  -->
+  <Import Project="..\..\src\MSBuild.SDK.SystemWeb.WebForms\Sdk\Sdk.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>ExampleWebFormsApplicationVB</RootNamespace>
+    <OptionStrict>On</OptionStrict>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)GeneratedFiles</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Import Include="System.Web" />
+    <Import Include="System.Web.UI" />
+    <Import Include="System.Web.UI.WebControls" />
+    <Import Include="System.Web.UI.HtmlControls" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Web.Extensions" />
+    <None Include="Properties\launchSettings.json" />
+    <ProjectReference Include="..\..\src\MSBuild.SDK.SystemWeb.WebForms\MSBuild.SDK.SystemWeb.WebForms.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      SetTargetFramework="TargetFramework=netstandard2.0" />
+  </ItemGroup>
+
+  <Import Project="..\..\src\MSBuild.SDK.SystemWeb.WebForms\Sdk\Sdk.targets" />
+</Project>
