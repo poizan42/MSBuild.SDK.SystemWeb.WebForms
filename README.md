@@ -21,8 +21,8 @@ See the [package README](src/MSBuild.SDK.SystemWeb.WebForms/README.md) for usage
 
 ## Status
 
-Prototype. C# and VB projects are supported. Validated against several hundred pages of existing Web Application Projects:
-the generated designers matched Visual Studio's checked-in `*.designer.cs` files wherever those were up to date.
+Version 1.0. C# and VB projects are supported. Validated against several hundred pages of existing Web Application Projects, internal
+and open source: the generated designers matched Visual Studio's checked-in designer files wherever those were up to date.
 
 Currently 100% AI generated code and has only had a cursory glance by human eyes. Use it at your own risk. You can make issues or PRs, but I make no promise on whether or not I will take a look at them.
 
