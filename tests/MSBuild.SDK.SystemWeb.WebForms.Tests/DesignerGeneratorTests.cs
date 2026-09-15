@@ -153,7 +153,7 @@ public class DesignerGeneratorTests
         var result = new GeneratorTestHost()
             .WithWebConfig(
                 "<configuration><system.web><pages><controls>" +
-                "<add tagPrefix=\"ex\" namespace=\"WebApp.Controls\" />" +
+                "<add tagPrefix=\"ex\" namespace=\"WebApp.Controls\" assembly=\"WebApp\" />" +
                 "<add tagPrefix=\"uc\" tagName=\"Hello\" src=\"~/Controls/Hello.ascx\" />" +
                 "</controls></pages></system.web></configuration>")
             .WithMarkup("Default.aspx", PageDirective + "<form id=\"form1\" runat=\"server\"><ex:GreetingLabel ID=\"greet\" runat=\"server\" /><uc:Hello ID=\"hello\" runat=\"server\" /></form>")
@@ -167,6 +167,26 @@ public class DesignerGeneratorTests
         var source = result.GetSource(DefaultHint);
         DesignerAssert.HasField(source, "global::WebApp.Controls.GreetingLabel", "greet");
         DesignerAssert.HasField(source, "global::WebApp.Controls.Hello", "hello");
+        DesignerAssert.Compiles(result);
+    }
+
+    [NetFx48Fact]
+    public void Web_config_namespace_registration_without_assembly_is_reported_but_still_resolved()
+    {
+        var result = new GeneratorTestHost()
+            .WithWebConfig("<configuration><system.web><pages><controls><add tagPrefix=\"ex\" namespace=\"WebApp.Controls\" /></controls></pages></system.web></configuration>")
+            .WithMarkup("Default.aspx", PageDirective + "<form id=\"form1\" runat=\"server\"><ex:GreetingLabel ID=\"a\" runat=\"server\" /><ex:GreetingLabel ID=\"b\" runat=\"server\" /></form>")
+            .WithSource("Default.aspx.cs", DefaultCodeBehind)
+            .WithSource("Controls.cs", "namespace WebApp.Controls { public class GreetingLabel : System.Web.UI.WebControls.Label { } }")
+            .Run();
+
+        var diagnostic = DesignerAssert.HasDiagnostic(result, "SWWF007");
+        Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
+        Assert.Contains("assembly=\"WebApp\"", diagnostic.GetMessage());
+        Assert.Single(result.GeneratorDiagnostics); // once per registration, not per tag
+        var source = result.GetSource(DefaultHint);
+        DesignerAssert.HasField(source, "global::WebApp.Controls.GreetingLabel", "a");
+        DesignerAssert.HasField(source, "global::WebApp.Controls.GreetingLabel", "b");
         DesignerAssert.Compiles(result);
     }
 
@@ -413,11 +433,11 @@ public class DesignerGeneratorTests
         var result = new GeneratorTestHost()
             .WithWebConfig(
                 "<configuration>" +
-                "<system.web><pages><controls><add tagPrefix=\"ex\" namespace=\"WebApp.Controls\" /></controls></pages></system.web>" +
-                "<location path=\"Admin\"><system.web><pages><controls><add tagPrefix=\"adm\" namespace=\"WebApp.Admin\" /></controls></pages></system.web></location>" +
+                "<system.web><pages><controls><add tagPrefix=\"ex\" namespace=\"WebApp.Controls\" assembly=\"WebApp\" /></controls></pages></system.web>" +
+                "<location path=\"Admin\"><system.web><pages><controls><add tagPrefix=\"adm\" namespace=\"WebApp.Admin\" assembly=\"WebApp\" /></controls></pages></system.web></location>" +
                 "</configuration>")
             .WithMarkup("Admin/Reports/Web.config",
-                "<configuration><system.web><pages><controls><add tagPrefix=\"rep\" namespace=\"WebApp.Reports\" /></controls></pages></system.web></configuration>")
+                "<configuration><system.web><pages><controls><add tagPrefix=\"rep\" namespace=\"WebApp.Reports\" assembly=\"WebApp\" /></controls></pages></system.web></configuration>")
             .WithMarkup("Default.aspx", PageDirective + "<form id=\"form1\" runat=\"server\"><ex:GreetingLabel ID=\"a\" runat=\"server\" /><adm:AdminLabel ID=\"b\" runat=\"server\" /></form>")
             .WithMarkup("Admin/Reports/Sales.aspx",
                 "<%@ Page Language=\"C#\" CodeBehind=\"Sales.aspx.cs\" Inherits=\"WebApp.Sales\" %>" +

@@ -28,6 +28,48 @@
     <CompilerVisibleProperty Include="RootNamespace" />
   </ItemGroup>
 
+  <!--
+    Precompiled publish with merge (PrecompileBeforePublish + UseMerge in a publish profile): Visual Studio's
+    Microsoft.Web.Publishing.AspNetCompileMerge.targets needs assembly attributes for the merged assembly and looks for a
+    Compile item literally named AssemblyInfo, which SDK-style projects do not have (theirs is generated into obj). Supplying
+    @(AssemblyAttributes) is the pipeline's documented alternative, so derive them from the project's own properties unless
+    the project provided attributes or pointed at a file itself. GetAspNetMergePath runs right before the attribute-based
+    generation target, so hooking after it places these items before that target's condition is evaluated.
+  -->
+  <Target Name="_MSBuildSDKSystemWebWebFormsMergeAssemblyAttributes"
+          AfterTargets="GetAspNetMergePath"
+          Condition="'$(UseMerge)'=='true' AND '@(AssemblyAttributes)'=='' AND '$(_AssemblyInfoSource)'=='' AND '$(AssemblyInfoDll)'==''">
+    <PropertyGroup>
+      <_WebFormsMergeAssemblyTitle>$(AssemblyTitle)</_WebFormsMergeAssemblyTitle>
+      <_WebFormsMergeAssemblyTitle Condition="'$(_WebFormsMergeAssemblyTitle)'==''">$(SingleAssemblyName)</_WebFormsMergeAssemblyTitle>
+      <_WebFormsMergeAssemblyTitle Condition="'$(_WebFormsMergeAssemblyTitle)'==''">$(AssemblyName)</_WebFormsMergeAssemblyTitle>
+    </PropertyGroup>
+    <ItemGroup>
+      <AssemblyAttributes Include="AssemblyTitle" Condition="'$(_WebFormsMergeAssemblyTitle)'!=''">
+        <value>$(_WebFormsMergeAssemblyTitle)</value>
+      </AssemblyAttributes>
+      <AssemblyAttributes Include="AssemblyProduct" Condition="'$(Product)'!=''">
+        <value>$(Product)</value>
+      </AssemblyAttributes>
+      <AssemblyAttributes Include="AssemblyCompany" Condition="'$(Company)'!=''">
+        <value>$(Company)</value>
+      </AssemblyAttributes>
+      <AssemblyAttributes Include="AssemblyCopyright" Condition="'$(Copyright)'!=''">
+        <value>$(Copyright)</value>
+      </AssemblyAttributes>
+      <AssemblyAttributes Include="AssemblyDescription" Condition="'$(Description)'!=''">
+        <value>$(Description)</value>
+      </AssemblyAttributes>
+      <AssemblyAttributes Include="AssemblyVersion" Condition="'$(AssemblyVersion)'!=''">
+        <value>$(AssemblyVersion)</value>
+      </AssemblyAttributes>
+      <AssemblyAttributes Include="AssemblyFileVersion" Condition="'$(FileVersion)'!=''">
+        <value>$(FileVersion)</value>
+      </AssemblyAttributes>
+    </ItemGroup>
+    <Message Importance="normal" Text="Merged assembly attributes derived from project properties (title '$(_WebFormsMergeAssemblyTitle)', version '$(AssemblyVersion)')." />
+  </Target>
+
   <Target Name="_MSBuildSDKSystemWebWebFormsCheckSdk" BeforeTargets="BeforeBuild;CoreCompile" Condition="'$(UsingMSBuildSDKSystemWeb)'!='true'">
     <Error Code="SWWF900" Text="KfbSoft.MSBuild.SDK.SystemWeb.WebForms must be used together with the MSBuild.SDK.SystemWeb project SDK (&lt;Project Sdk=&quot;MSBuild.SDK.SystemWeb&quot;&gt;)." />
   </Target>

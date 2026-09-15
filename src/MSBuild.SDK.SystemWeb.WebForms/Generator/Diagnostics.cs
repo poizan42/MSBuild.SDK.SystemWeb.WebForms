@@ -49,6 +49,15 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator
             isEnabledByDefault: true,
             description: "Designer code is a partial class declaration and can only extend a class declared in the project being compiled.");
 
+        public static readonly DiagnosticDescriptor WebConfigRegistrationWithoutAssembly = new(
+            id: "SWWF007",
+            title: "Web.config control registration without assembly",
+            messageFormat: "Web.config registers tag prefix '{0}' for namespace '{1}' without an assembly attribute; at runtime ASP.NET only searches App_Code for such registrations, which SDK-style projects do not have, so '<{2}>' will fail with 'Unknown server tag'. Add assembly=\"{3}\" to the registration.",
+            category: Category,
+            defaultSeverity: DiagnosticSeverity.Warning,
+            isEnabledByDefault: true,
+            description: "The generator resolves the type through the compilation regardless, so the page compiles but fails when ASP.NET parses it.");
+
         public static readonly DiagnosticDescriptor CodeBehindClassNotFound = new(
             id: "SWWF005",
             title: "Code-behind class not found in compilation",

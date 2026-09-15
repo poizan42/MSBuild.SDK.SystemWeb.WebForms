@@ -16,6 +16,7 @@
   <ItemGroup>
     <Reference Include="System.Web.Extensions" />
     <None Include="Properties\launchSettings.json" />
+    <None Include="Properties\PublishProfiles\*.pubxml" />
     <ProjectReference Include="..\..\src\MSBuild.SDK.SystemWeb.WebForms\MSBuild.SDK.SystemWeb.WebForms.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false"

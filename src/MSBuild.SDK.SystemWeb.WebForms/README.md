@@ -80,6 +80,7 @@ If you turned those off, add your markup files as `AdditionalFiles` yourself.
 | `SWWF004` | Warning | A master page or user control referenced by virtual path was not found among the project's markup files. A missing user control is typed as `System.Web.UI.UserControl`; a missing master page gets no typed `Master` property. |
 | `SWWF005` | Info | The code-behind class named by `Inherits` is not in the compilation; the partial class is generated from the attribute anyway. |
 | `SWWF006` | Info | The class named by `Inherits` lives in a referenced assembly, so no partial class can be generated for it. |
+| `SWWF007` | Warning | A Web.config `pages/controls` registration has a `namespace` but no `assembly`. The generator resolves the type anyway, but at runtime ASP.NET only searches `App_Code` for such registrations, so the page fails with "Unknown server tag". Add `assembly="..."`. |
 
 ## Known limitations
 

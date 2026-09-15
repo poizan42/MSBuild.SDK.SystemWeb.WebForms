@@ -29,6 +29,7 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
         private readonly HashSet<ISymbol> _dependencies = new(SymbolEqualityComparer.Default);
         private readonly List<DesignerField> _fields = new();
         private readonly HashSet<string> _fieldNames;
+        private readonly HashSet<string> _reportedAssemblyLessPrefixes = new(StringComparer.OrdinalIgnoreCase);
         private readonly string _language;
         private INamedTypeSymbol? _classSymbol;
         private bool _cacheable = true;
@@ -316,6 +317,12 @@ namespace MSBuild.SDK.SystemWeb.WebForms.Generator.Model
                     if (symbol is not null)
                     {
                         DependOn(symbol);
+                        if (registration.Source == RegistrationSource.WebConfig && registration.Assembly is null && element.RunAtServer
+                            && _reportedAssemblyLessPrefixes.Add(registration.TagPrefix + ":" + registration.Namespace))
+                        {
+                            Report(Diagnostics.WebConfigRegistrationWithoutAssembly, element.Position, null, registration.TagPrefix, registration.Namespace!, element.RawName, symbol.ContainingAssembly.Name);
+                        }
+
                         return (symbol, Display(symbol));
                     }
                 }

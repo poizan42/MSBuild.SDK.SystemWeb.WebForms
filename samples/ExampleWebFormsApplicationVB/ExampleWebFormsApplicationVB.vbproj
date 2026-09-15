@@ -23,6 +23,8 @@
   <ItemGroup>
     <Reference Include="System.Web.Extensions" />
     <None Include="Properties\launchSettings.json" />
+    <!-- VB projects keep publish profiles under "My Project" (that is where the publish pipeline looks for them). -->
+    <None Include="My Project\PublishProfiles\*.pubxml" />
     <ProjectReference Include="..\..\src\MSBuild.SDK.SystemWeb.WebForms\MSBuild.SDK.SystemWeb.WebForms.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false"

@@ -276,3 +276,6 @@ cloud3d-codesign.snk
 # libman restored files
 /samples/ExampleFullWebApplication/lib
 /samples/RazorLibrary/ExampleRazorLibraryApplication/lib
+
+# Output of the samples' Precompiled publish profiles
+publish/

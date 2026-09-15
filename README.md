@@ -68,6 +68,31 @@ and reference `<Sdk Name="KfbSoft.MSBuild.SDK.SystemWeb.WebForms" Version="..." 
 Note for generator development: Visual Studio does not reload a rebuilt generator assembly until it is restarted; command-line builds
 always pick up the new build.
 
+## Publishing precompiled
+
+Precompiling the markup and merging the page assemblies at publish time works exactly as for a legacy Web Application Project,
+because the SystemWeb SDK imports Visual Studio's web publishing pipeline. The generated designer fields are in the project
+assembly, and `aspnet_compiler` compiles the markup against it. Both samples carry a `Precompiled.pubxml` (under `Properties/PublishProfiles`
+for C#, `My Project/PublishProfiles` for VB, which is where the pipeline looks):
+
+```bash
+msbuild samples/ExampleWebFormsApplication/ExampleWebFormsApplication.csproj -p:Configuration=Release -p:DeployOnBuild=true -p:PublishProfile=Precompiled
+```
+
+The profile is a normal file-system profile plus `PrecompileBeforePublish`, `EnableUpdateable`, `UseMerge` and `SingleAssemblyName`
+(the old Web Deployment Project `WDPMergeOption=MergeAll...` collapses to `UseMerge` + `SingleAssemblyName` for a WAP, since the
+code-behind is already one assembly). Three things this SDK and the profile take care of:
+
+- The merge step wants a hand-written `AssemblyInfo` file to copy assembly attributes from; SDK-style projects have none, so
+  `KfbSoft.MSBuild.SDK.SystemWeb.WebForms` derives `AssemblyAttributes` from the project properties when `UseMerge` is on
+  (add your own `AssemblyAttributes` items, `_AssemblyInfoSource` or `AssemblyInfoDll` to override).
+- `SingleAssemblyName` must differ from the project's assembly name.
+- The profile sets `MvcBuildViews=False`: the SystemWeb SDK's Release-mode view compilation would otherwise clean the output
+  after publishing, and precompilation already validates the views.
+
+`aspnet_merge.exe` comes with the Windows SDK's ".NET Framework 4.x Tools"; the pipeline reports clearly if it is missing.
+`WebPublishMethod=FileSystem` only takes effect from a profile, not from the command line alone.
+
 ## Checking parity against an existing project
 
 `tools/DesignerCompare` is the parity test: point it at a Web Application Project (or a project-less Web Site) and it compiles the
