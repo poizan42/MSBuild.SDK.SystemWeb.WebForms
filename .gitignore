@@ -279,3 +279,5 @@ cloud3d-codesign.snk
 
 # Output of the samples' Precompiled publish profiles
 publish/
+# ...but the samples' precompiled publish profiles are part of the repo
+!samples/**/PublishProfiles/Precompiled.pubxml
