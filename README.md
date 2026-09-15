@@ -61,7 +61,8 @@ msbuild -restore samples/ExampleWebFormsApplication/ExampleWebFormsApplication.c
 
 The generated designer code is written to `samples/ExampleWebFormsApplication/obj/GeneratedFiles`.
 
-Building the generator project also produces the SDK package in `packages/`. To try the packaged SDK, point a `nuget.config` at that folder
+The package version is the three-part `version` in `version.json` (Nerdbank.GitVersioning); bump it explicitly for each release and tag
+the commit `v<version>`. Building the generator project also produces the SDK package in `packages/`. To try the packaged SDK, point a `nuget.config` at that folder
 and reference `<Sdk Name="KfbSoft.MSBuild.SDK.SystemWeb.WebForms" Version="..." />` from a project; the NuGet SDK resolver caches SDK packages in
 `%USERPROFILE%\.nuget\packages`, so bump the version (or delete the cached folder) when iterating.
 
